@@ -3,8 +3,8 @@ using System.IO;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
 using MusicSync.Models;
-
 using System.Diagnostics.CodeAnalysis;
+using MusicSync.Utils;
 
 namespace MusicSync.Services
 {
@@ -22,17 +22,24 @@ namespace MusicSync.Services
 
             foreach (var p in possible)
             {
-                if (string.IsNullOrEmpty(p)) continue;
-                if (File.Exists(p))
+                if (string.IsNullOrEmpty(p))
                 {
-                    Console.WriteLine($"Loading configuration from: {p}");
-                    var deserializer = new DeserializerBuilder()
-                        .WithNamingConvention(UnderscoredNamingConvention.Instance)
-                        .Build();
-                    using var reader = new StreamReader(p);
-                    return deserializer.Deserialize<Config>(reader);
+                    continue;
                 }
+
+                if (!File.Exists(p))
+                {
+                    continue;
+                }
+
+                Console.WriteLine($"Loading configuration from: {p}");
+                var deserializer = new StaticDeserializerBuilder(new ConfigYamlContext())
+                    .WithNamingConvention(UnderscoredNamingConvention.Instance)
+                    .Build();
+                using StreamReader reader = new(p);
+                return deserializer.Deserialize<Config>(reader);
             }
+
             Console.WriteLine("Error: config.yaml not found.");
             Console.WriteLine("Tried: " + string.Join(", ", possible));
             Environment.Exit(1);
