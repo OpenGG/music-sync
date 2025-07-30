@@ -9,7 +9,7 @@ public class DatabaseLoggingTests
     {
         var dbPath = Path.GetTempFileName();
         using var db = new DatabaseService(dbPath);
-        db.LogOperation("file", 1, "mock_md5", "copy_success");
+        db.LogOperation("file", 1, "mock_hash", "copy_success");
         var result = db.FindPreviousResult("file", 1);
         Assert.Equal("copy_success", result);
         File.Delete(dbPath);

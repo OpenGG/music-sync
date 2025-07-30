@@ -1,17 +1,20 @@
+using System.Diagnostics.CodeAnalysis;
+using MusicSync.Models;
 using MusicSync.Plugins;
 using MusicSync.Utils;
-using System.Diagnostics.CodeAnalysis;
 
 namespace MusicSync.Services;
 
 [ExcludeFromCodeCoverage]
 public class MusicFileProcessor(
     DatabaseService db,
-    string incomingDir,
-    string[] supportedExtensions,
+    Config config,
+    TemporaryDirectory rootTempDir,
     DrmPluginLoader pluginLoader)
 {
     private static readonly string[] SourceArray = ["copy_success", "dedrm_success"];
+
+    private readonly string[] _mediaExtensions = config.MusicExtensions.Select(e => e.ToLower()).ToArray();
 
     public void ProcessFile(string path, string sourceDir)
     {
@@ -31,7 +34,7 @@ public class MusicFileProcessor(
         {
             HandleDrmFile(path, mtime, relativePath, name, plugin);
         }
-        else if (supportedExtensions.Contains(Path.GetExtension(path).ToLower()))
+        else if (_mediaExtensions.Contains(Path.GetExtension(path).ToLower()))
         {
             HandleRegularFile(path, mtime, relativePath);
         }
@@ -51,43 +54,47 @@ public class MusicFileProcessor(
     {
         try
         {
-            var md5 = FfmpegUtil.GetAudioMd5(filepath);
-            return md5;
-            // return string.IsNullOrEmpty(md5) ? ComputeHash(filepath, MD5.Create()) : md5;
+            var hash = FfmpegUtil.GetAudioHash(filepath);
+            return hash;
+            // return string.IsNullOrEmpty(hash) ? ComputeHash(filepath, hash.Create()) : hash;
         }
-        catch
+        catch (Exception e)
         {
+            Console.WriteLine($"Error GetMusicHash(): {e}");
             return null;
-            // return ComputeHash(filepath, MD5.Create());
+            // return ComputeHash(filepath, hash.Create());
         }
     }
 
     private void HandleRegularFile(string path, long mtime, string relativePath)
     {
-        var targetDir = Path.Combine(incomingDir, Path.GetDirectoryName(relativePath) ?? string.Empty);
+        var targetDir = Path.Join(config.MusicDestDir, Path.GetDirectoryName(relativePath) ?? string.Empty);
         Directory.CreateDirectory(targetDir);
-        var dest = Path.Combine(targetDir, Path.GetFileName(path));
-        var md5 = GetMusicHash(path);
-        if (md5 == null)
+        var dest = Path.Join(targetDir, Path.GetFileName(path));
+        var hash = GetMusicHash(path);
+        if (hash == null)
         {
-            db.LogOperation(path, mtime, null, "md5_fail_copy");
+            db.LogOperation(path, mtime, null, "hash_fail_copy");
             return;
         }
 
-        if (db.IsMusicHashProcessed(md5))
+        if (db.IsMusicHashProcessed(hash))
         {
-            db.LogOperation(path, mtime, md5, "skip_music_hash_exists", false);
+            db.LogOperation(path, mtime, hash, "skip_music_hash_exists", false);
             return;
         }
 
-        File.Copy(path, dest, true);
-        db.RecordMusicHash(md5);
-        db.LogOperation(path, mtime, md5, "copy_success");
+        var finalPath = preventOverwrite(dest);
+        File.Copy(path, finalPath, true);
+        db.RecordMusicHash(hash);
+        db.LogOperation(path, mtime, hash, "copy_success");
     }
 
     private void HandleDrmFile(string path, long mtime, string relativePath, string name, DrmPlugin plugin)
     {
-        var found = plugin.Decrypt(path, supportedExtensions);
+        using var tempDir = rootTempDir.CreateTemporaryDirectory();
+
+        var found = plugin.Decrypt(path, tempDir, _mediaExtensions);
         if (found == null)
         {
             db.LogOperation(path, mtime, null, $"dedrm_fail_plugin_error_{plugin.Name}");
@@ -107,11 +114,34 @@ public class MusicFileProcessor(
             return;
         }
 
-        var targetDir = Path.Combine(incomingDir, Path.GetDirectoryName(relativePath) ?? string.Empty);
+        var targetDir = Path.Join(config.MusicDestDir, Path.GetDirectoryName(relativePath) ?? string.Empty);
         Directory.CreateDirectory(targetDir);
-        var finalPath = Path.Combine(targetDir, name + Path.GetExtension(found));
+        var destPath = Path.Join(targetDir, name + Path.GetExtension(found));
+        var finalPath = preventOverwrite(destPath);
         File.Move(found, finalPath, true);
         db.RecordMusicHash(hash);
         db.LogOperation(path, mtime, hash, "dedrm_success");
+    }
+
+    private static string preventOverwrite(string path)
+    {
+        if (!File.Exists(path))
+        {
+            return path;
+        }
+
+        for (var i = 0; ; ++i)
+        {
+            var uniqName =
+                $"{Path.GetFileNameWithoutExtension(path)}.{i}.{Path.GetExtension(path)}";
+
+            var uniqPath =
+                Path.Join(Path.GetDirectoryName(path), uniqName);
+
+            if (!File.Exists(uniqPath))
+            {
+                return uniqPath;
+            }
+        }
     }
 }

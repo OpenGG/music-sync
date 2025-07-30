@@ -8,7 +8,7 @@ public class DrmPluginLoaderTests
     [Fact]
     public void Load_FindsPlugin()
     {
-        var pluginPath = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
+        var pluginPath = Path.Join(Path.GetTempPath(), Path.GetRandomFileName());
         File.WriteAllText(pluginPath, "echo");
         System.Diagnostics.Process.Start("chmod", $"+x {pluginPath}").WaitForExit();
         var cfg = new DrmPluginConfig { Name = pluginPath, Enabled = true, Extensions = [".ncm"] };

@@ -26,4 +26,8 @@
     <ProjectReference Include="..\MusicSync\MusicSync.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <EmbeddedResource Include="Fixtures\silent_audio.mp3" />
+  </ItemGroup>
+
 </Project>

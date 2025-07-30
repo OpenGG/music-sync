@@ -1,140 +1,174 @@
 using MusicSync.Models;
 using MusicSync.Services;
+using MusicSync.Utils;
 
 namespace MusicSync.Tests;
 
 public class MusicFileProcessorTests
 {
-    private static string CreateTempFile(string dir, string name, string content)
-    {
-        Directory.CreateDirectory(dir);
-        var path = Path.Combine(dir, name);
-        File.WriteAllText(path, content);
-        return path;
-    }
-
     [Fact]
     public void Process_RegularFile_Copies()
     {
-        var srcDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
-        var inDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
-        var dbPath = Path.GetTempFileName();
-        var file = CreateTempFile(srcDir, "a.mp3", "data");
+        using var srcDir = new TemporaryDirectory().Create();
+        using var destDir = new TemporaryDirectory();
+        using var tempDir = new TemporaryDirectory();
 
-        using var db = new DatabaseService(dbPath);
-        var proc = new MusicFileProcessor(db, inDir, [".mp3"], new DrmPluginLoader([]));
-        proc.ProcessFile(file, srcDir);
+        using var srcFile = srcDir.CreateTemporaryFile("a.mp3", TestUtils.getMp3Bytes());
 
-        Assert.True(File.Exists(Path.Combine(inDir, "a.mp3")));
+        using var dbFile = new TemporaryFile(Path.GetRandomFileName()).Create();
+        using var db = new DatabaseService(dbFile.FilePath);
 
-        Directory.Delete(srcDir, true);
-        Directory.Delete(inDir, true);
-        File.Delete(dbPath);
+        var config = new Config
+        {
+            MusicSources = [srcDir.DirectoryPath],
+            MusicDestDir = destDir.DirectoryPath,
+            MusicExtensions = [".mp3"]
+        };
+        var proc = new MusicFileProcessor(db, config, tempDir, new DrmPluginLoader([]));
+        proc.ProcessFile(srcFile.FilePath, srcDir.DirectoryPath);
+
+        Assert.True(File.Exists(Path.Join(destDir.DirectoryPath, "a.mp3")));
     }
 
     [Fact]
     public void Process_DrmFile_UsesPlugin()
     {
-        var srcDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
-        var inDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
-        var dbPath = Path.GetTempFileName();
-        var drmFile = CreateTempFile(srcDir, "b.ncm", "data");
-        var pluginPath = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
-        File.WriteAllText(pluginPath, "#!/bin/sh\ncp $1 $2/out.mp3\n");
-        System.Diagnostics.Process.Start("chmod", $"+x {pluginPath}").WaitForExit();
+        using var srcDir = new TemporaryDirectory().Create();
+        using var destDir = new TemporaryDirectory();
+        using var tempDir = new TemporaryDirectory();
 
-        var cfg = new DrmPluginConfig { Name = pluginPath, Enabled = true, Extensions = [".ncm"] };
+        using var drmFile = srcDir.CreateTemporaryFile("b.ncm", TestUtils.getMp3Bytes());
+
+        using var pluginFile = new TemporaryFile(Path.GetRandomFileName()).Create(
+            """
+            #!/bin/sh
+            cp $1 $2/out.mp3
+            """);
+        System.Diagnostics.Process.Start("chmod", $"+x {pluginFile.FilePath}").WaitForExit();
+
+        var cfg = new DrmPluginConfig { Name = pluginFile.FilePath, Enabled = true, Extensions = [".ncm"] };
         var loader = new DrmPluginLoader([cfg]);
 
-        using var db = new DatabaseService(dbPath);
-        var proc = new MusicFileProcessor(db, inDir, [".mp3"], loader);
-        proc.ProcessFile(drmFile, srcDir);
+        using var dbFile = new TemporaryFile(Path.GetRandomFileName()).Create();
+        using var db = new DatabaseService(dbFile.FilePath);
 
-        Assert.True(File.Exists(Path.Combine(inDir, "b.mp3")));
+        var config = new Config
+        {
+            MusicSources = [srcDir.DirectoryPath],
+            MusicDestDir = destDir.DirectoryPath,
+            MusicExtensions = [".mp3"]
+        };
 
-        Directory.Delete(srcDir, true);
-        Directory.Delete(inDir, true);
-        File.Delete(dbPath);
-        File.Delete(pluginPath);
+        var proc = new MusicFileProcessor(db, config, tempDir, loader);
+        proc.ProcessFile(drmFile.FilePath, srcDir.DirectoryPath);
+
+        Assert.True(File.Exists(Path.Join(destDir.DirectoryPath, "b.mp3")));
     }
 
     [Fact]
     public void ProcessFile_SkipsDuplicate()
     {
-        var srcDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
-        var inDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
-        var dbPath = Path.GetTempFileName();
-        var file = CreateTempFile(srcDir, "c.mp3", "data");
+        using var srcDir = new TemporaryDirectory().Create();
+        using var destDir = new TemporaryDirectory();
+        using var tempDir = new TemporaryDirectory();
 
-        using var db = new DatabaseService(dbPath);
-        var proc = new MusicFileProcessor(db, inDir, [".mp3"], new DrmPluginLoader([]));
-        proc.ProcessFile(file, srcDir);
-        proc.ProcessFile(file, srcDir);
+        using var srcFile = srcDir.CreateTemporaryFile("c.mp3", TestUtils.getMp3Bytes());
 
-        Assert.True(File.Exists(Path.Combine(inDir, "c.mp3")));
-        Assert.Single(Directory.GetFiles(inDir));
+        using var dbFile = new TemporaryFile(Path.GetRandomFileName()).Create();
+        using var db = new DatabaseService(dbFile.FilePath);
 
-        Directory.Delete(srcDir, true);
-        Directory.Delete(inDir, true);
-        File.Delete(dbPath);
+        var config = new Config
+        {
+            MusicSources = [srcDir.DirectoryPath],
+            MusicDestDir = destDir.DirectoryPath,
+            MusicExtensions = [".mp3"]
+        };
+        var proc = new MusicFileProcessor(db, config, tempDir, new DrmPluginLoader([]));
+        proc.ProcessFile(srcFile.FilePath, srcDir.DirectoryPath);
+        proc.ProcessFile(srcFile.FilePath, srcDir.DirectoryPath);
+
+        Assert.True(File.Exists(Path.Join(destDir.DirectoryPath, "c.mp3")));
+        Assert.Single(Directory.GetFiles(destDir.DirectoryPath));
     }
 
     [Fact]
     public void ProcessFile_PluginError()
     {
-        var srcDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
-        var inDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
-        var dbPath = Path.GetTempFileName();
-        var drmFile = CreateTempFile(srcDir, "fail.ncm", "data");
-        var pluginPath = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
-        File.WriteAllText(pluginPath, "#!/bin/sh\nexit 1\n");
-        System.Diagnostics.Process.Start("chmod", $"+x {pluginPath}").WaitForExit();
-        var cfg = new DrmPluginConfig { Name = pluginPath, Enabled = true, Extensions = [".ncm"] };
+        using var srcDir = new TemporaryDirectory().Create();
+        using var destDir = new TemporaryDirectory();
+        using var tempDir = new TemporaryDirectory();
+
+        using var drmFile = srcDir.CreateTemporaryFile("fail.ncm", "data");
+
+        using var dbFile = new TemporaryFile(Path.GetRandomFileName()).Create();
+        using var db = new DatabaseService(dbFile.FilePath);
+
+        using var pluginFile = new TemporaryFile(Path.GetRandomFileName()).Create("#!/bin/sh\nexit 1\n");
+        System.Diagnostics.Process.Start("chmod", $"+x {pluginFile.FilePath}").WaitForExit();
+
+        var cfg = new DrmPluginConfig { Name = pluginFile.FilePath, Enabled = true, Extensions = [".ncm"] };
         var loader = new DrmPluginLoader([cfg]);
-        using var db = new DatabaseService(dbPath);
-        var proc = new MusicFileProcessor(db, inDir, [".mp3"], loader);
-        proc.ProcessFile(drmFile, srcDir);
-        Assert.False(File.Exists(Path.Combine(inDir, "fail.mp3")));
-        if (Directory.Exists(srcDir)) Directory.Delete(srcDir, true);
-        if (Directory.Exists(inDir)) Directory.Delete(inDir, true);
-        if (File.Exists(dbPath)) File.Delete(dbPath);
-        if (File.Exists(pluginPath)) File.Delete(pluginPath);
+
+        var config = new Config
+        {
+            MusicSources = [srcDir.DirectoryPath],
+            MusicDestDir = destDir.DirectoryPath,
+            MusicExtensions = [".mp3"]
+        };
+        var proc = new MusicFileProcessor(db, config, tempDir, loader);
+        proc.ProcessFile(drmFile.FilePath, srcDir.DirectoryPath);
+        Assert.False(File.Exists(Path.Join(destDir.DirectoryPath, "fail.mp3")));
     }
 
     [Fact]
     public void ProcessFile_UnsupportedExtension()
     {
-        var srcDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
-        var inDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
-        var dbPath = Path.GetTempFileName();
-        Directory.CreateDirectory(srcDir);
-        File.WriteAllText(Path.Combine(srcDir, "unk.xyz"), "data");
-        using var db = new DatabaseService(dbPath);
-        var proc = new MusicFileProcessor(db, inDir, [".mp3"], new DrmPluginLoader([]));
-        proc.ProcessFile(Path.Combine(srcDir, "unk.xyz"), srcDir);
-        Assert.False(Directory.Exists(inDir));
-        Directory.Delete(srcDir, true);
-        File.Delete(dbPath);
+        using var srcDir = new TemporaryDirectory().Create();
+        using var destDir = new TemporaryDirectory();
+        using var tempDir = new TemporaryDirectory();
+
+        using var dbFile = new TemporaryFile(Path.GetRandomFileName()).Create();
+        using var db = new DatabaseService(dbFile.FilePath);
+
+        using var unsupportedFile = srcDir.CreateTemporaryFile("unk.xyz", "data");
+
+        var config = new Config
+        {
+            MusicSources = [srcDir.DirectoryPath],
+            MusicDestDir = destDir.DirectoryPath,
+            MusicExtensions = [".mp3"]
+        };
+        var proc = new MusicFileProcessor(db, config, tempDir, new DrmPluginLoader([]));
+        proc.ProcessFile(unsupportedFile.FilePath, srcDir.DirectoryPath);
+        Assert.False(Directory.Exists(destDir.DirectoryPath));
     }
 
     [Fact]
     public void ProcessFile_PluginNoOutput()
     {
-        var srcDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
-        var inDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
-        var dbPath = Path.GetTempFileName();
-        var drmFile = CreateTempFile(srcDir, "empty.ncm", "data");
-        var pluginPath = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
-        File.WriteAllText(pluginPath, "#!/bin/sh\nmkdir $2\n");
-        System.Diagnostics.Process.Start("chmod", $"+x {pluginPath}").WaitForExit();
-        var cfg = new DrmPluginConfig { Name = pluginPath, Enabled = true, Extensions = [".ncm"] };
+        using var srcDir = new TemporaryDirectory().Create();
+        using var destDir = new TemporaryDirectory();
+        using var tempDir = new TemporaryDirectory();
+
+        using var dbFile = new TemporaryFile(Path.GetRandomFileName()).Create();
+        using var db = new DatabaseService(dbFile.FilePath);
+
+        using var drmFile = srcDir.CreateTemporaryFile("empty.ncm", "data");
+
+        using var pluginFile = new TemporaryFile(Path.GetRandomFileName()).Create("#!/bin/sh\nmkdir $2\n");
+        System.Diagnostics.Process.Start("chmod", $"+x {pluginFile.FilePath}").WaitForExit();
+
+        var cfg = new DrmPluginConfig { Name = pluginFile.FilePath, Enabled = true, Extensions = [".ncm"] };
         var loader = new DrmPluginLoader([cfg]);
-        using var db = new DatabaseService(dbPath);
-        var proc = new MusicFileProcessor(db, inDir, [".mp3"], loader);
-        proc.ProcessFile(drmFile, srcDir);
-        Assert.False(Directory.Exists(inDir));
-        Directory.Delete(srcDir, true);
-        File.Delete(dbPath);
-        File.Delete(pluginPath);
+
+        var config = new Config
+        {
+            MusicSources = [srcDir.DirectoryPath],
+            MusicDestDir = destDir.DirectoryPath,
+            MusicExtensions = [".mp3"]
+        };
+        var proc = new MusicFileProcessor(db, config, tempDir, loader);
+        proc.ProcessFile(drmFile.FilePath, srcDir.DirectoryPath);
+        Assert.False(Directory.Exists(destDir.DirectoryPath));
     }
 }

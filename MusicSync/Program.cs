@@ -1,6 +1,6 @@
-using MusicSync.Services;
-
 using System.Diagnostics.CodeAnalysis;
+using MusicSync.Services;
+using MusicSync.Utils;
 
 namespace MusicSync;
 
@@ -13,11 +13,13 @@ public static class Program
         if (args.Length >= 2 && (args[0] == "-c" || args[0] == "--config"))
             configPath = args[1];
 
+        using var rootTempDir = new TemporaryDirectory();
+
         var config = ConfigLoader.Load(configPath);
         var pluginLoader = new DrmPluginLoader(config.DrmPlugins);
 
         using var db = new DatabaseService(string.IsNullOrEmpty(config.DatabaseFile) ? "music_sync.db" : config.DatabaseFile);
-        var processor = new MusicFileProcessor(db, config.MusicIncomingDir, config.MusicExtensions.Select(e => e.ToLower()).ToArray(), pluginLoader);
+        var processor = new MusicFileProcessor(db, config, rootTempDir, pluginLoader);
         var service = new MusicSyncService(processor, config.MusicSources);
         service.Run();
         return 0;

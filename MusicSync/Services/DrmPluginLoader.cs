@@ -1,6 +1,6 @@
+using System.Diagnostics.CodeAnalysis;
 using MusicSync.Models;
 using MusicSync.Plugins;
-using System.Diagnostics.CodeAnalysis;
 
 namespace MusicSync.Services;
 
@@ -34,7 +34,7 @@ public class DrmPluginLoader
     private static DrmPlugin? Load(DrmPluginConfig cfg)
     {
         var cwd = Directory.GetCurrentDirectory();
-        var pluginDir = Path.Combine(AppContext.BaseDirectory, "drm_plugins");
+        var pluginDir = Path.Join(AppContext.BaseDirectory, "drm_plugins");
         var candidates = new[] { cfg.Name, cfg.Name + ".sh", cfg.Name + ".bash" };
         foreach (var candidate in candidates)
         {
@@ -46,9 +46,9 @@ public class DrmPluginLoader
                 continue;
             }
 
-            path = Path.Combine(cwd, candidate);
+            path = Path.Join(cwd, candidate);
             if (File.Exists(path)) return Build(cfg, path);
-            path = Path.Combine(pluginDir, candidate);
+            path = Path.Join(pluginDir, candidate);
             if (File.Exists(path)) return Build(cfg, path);
         }
 

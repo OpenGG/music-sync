@@ -1,5 +1,5 @@
-using System.Security.Cryptography;
 using System.Diagnostics.CodeAnalysis;
+using System.Security.Cryptography;
 
 namespace MusicSync.Utils;
 

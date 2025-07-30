@@ -214,3 +214,4 @@ __marimo__/
 **/obj/
 TestResults/
 CoverageReport/
+*.sln.DotSettings.user

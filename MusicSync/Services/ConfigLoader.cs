@@ -1,8 +1,8 @@
+using System.Diagnostics.CodeAnalysis;
+using MusicSync.Models;
+using MusicSync.Utils;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
-using MusicSync.Models;
-using System.Diagnostics.CodeAnalysis;
-using MusicSync.Utils;
 
 namespace MusicSync.Services;
 
@@ -14,8 +14,8 @@ public static class ConfigLoader
         var possible = new[]
         {
             configPath,
-            Path.Combine(Directory.GetCurrentDirectory(), "config.yaml"),
-            Path.Combine(AppContext.BaseDirectory, "config.yaml")
+            Path.Join(Directory.GetCurrentDirectory(), "config.yaml"),
+            Path.Join(AppContext.BaseDirectory, "config.yaml")
         };
 
         foreach (var p in possible)

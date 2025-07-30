@@ -5,7 +5,7 @@ music_sources:
   # Add more paths as needed
 
 # Directory where processed (decrypted/copied) music files will be stored
-music_incoming_dir: /path/to/your/music_incoming
+music_dest_dir: /path/to/your/music_dest
 
 # Path to the SQLite database file for tracking processed files and hashes
 # If this line is commented out or removed, the script will default to 'music_sync.db'
