@@ -13,7 +13,7 @@ public class MusicFileProcessorTests
         using var destDir = new TemporaryDirectory();
         using var tempDir = new TemporaryDirectory();
 
-        using var srcFile = srcDir.CreateTemporaryFile("a.mp3", TestUtils.getMp3Bytes());
+        using var srcFile = srcDir.CreateTemporaryFile("a.mp3", TestUtils.GetMp3Bytes());
 
         using var dbFile = new TemporaryFile(Path.GetRandomFileName()).Create();
         using var db = new DatabaseService(dbFile.FilePath);
@@ -37,7 +37,7 @@ public class MusicFileProcessorTests
         using var destDir = new TemporaryDirectory();
         using var tempDir = new TemporaryDirectory();
 
-        using var drmFile = srcDir.CreateTemporaryFile("b.ncm", TestUtils.getMp3Bytes());
+        using var drmFile = srcDir.CreateTemporaryFile("b.ncm", TestUtils.GetMp3Bytes());
 
         using var pluginFile = new TemporaryFile(Path.GetRandomFileName()).Create(
             """
@@ -72,7 +72,7 @@ public class MusicFileProcessorTests
         using var destDir = new TemporaryDirectory();
         using var tempDir = new TemporaryDirectory();
 
-        using var srcFile = srcDir.CreateTemporaryFile("c.mp3", TestUtils.getMp3Bytes());
+        using var srcFile = srcDir.CreateTemporaryFile("c.mp3", TestUtils.GetMp3Bytes());
 
         using var dbFile = new TemporaryFile(Path.GetRandomFileName()).Create();
         using var db = new DatabaseService(dbFile.FilePath);

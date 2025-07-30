@@ -13,7 +13,7 @@ public class MusicSyncServiceTests
         using var destDir = new TemporaryDirectory();
         using var tempDir = new TemporaryDirectory();
 
-        using var srcFile = srcDir.CreateTemporaryFile("a.mp3", TestUtils.getMp3Bytes());
+        using var srcFile = srcDir.CreateTemporaryFile("a.mp3", TestUtils.GetMp3Bytes());
 
         using var dbFile = new TemporaryFile(Path.GetRandomFileName()).Create();
         using var db = new DatabaseService(dbFile.FilePath);

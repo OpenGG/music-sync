@@ -7,7 +7,7 @@ public class TestUtils
     private const string
         ResourceName = "MusicSync.Tests.Fixtures.silent_audio.mp3"; // Adjust to your actual namespace and path
 
-    public static byte[] getMp3Bytes()
+    public static byte[] GetMp3Bytes()
     {
         // Get the current assembly where the resource is embedded
         var assembly = Assembly.GetExecutingAssembly();
