@@ -10,7 +10,7 @@ using System.IO;
 public class TemporaryFile : IDisposable
 {
     private static readonly string CommonBaseDir =
-        $"music-sync-files-{Path.Join(Path.GetTempPath(), Path.GetRandomFileName())}";
+        Path.Join(Path.GetTempPath(), $"music-sync-files-{Path.GetRandomFileName()}");
 
     /// <summary>
     /// 获取临时文件的完整路径。
@@ -71,6 +71,11 @@ public class TemporaryFile : IDisposable
             {
                 File.Delete(FilePath);
                 // Console.WriteLine($"[TemporaryFile] 已删除：{FilePath}"); // 调试用
+
+                if (_baseDir == CommonBaseDir && !Directory.EnumerateFileSystemEntries(CommonBaseDir).Any())
+                {
+                    Directory.Delete(CommonBaseDir, true);
+                }
             }
             catch (Exception ex)
             {
