@@ -1,20 +1,17 @@
-using System.IO;
 using MusicSync.Services;
-using Xunit;
 
-namespace MusicSync.Tests
+namespace MusicSync.Tests;
+
+public class MusicSyncServiceMissingDirTests
 {
-    public class MusicSyncServiceMissingDirTests
+    [Fact]
+    public void Run_IgnoresMissingDir()
     {
-        [Fact]
-        public void Run_IgnoresMissingDir()
-        {
-            var missing = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
-            using var db = new DatabaseService(Path.GetTempFileName());
-            var proc = new MusicFileProcessor(db, Path.GetTempPath(), new[] { ".mp3" }, new DrmPluginLoader([]));
-            var service = new MusicSyncService(proc, new[] { missing });
-            service.Run();
-            // no exception means success
-        }
+        var missing = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
+        using var db = new DatabaseService(Path.GetTempFileName());
+        var proc = new MusicFileProcessor(db, Path.GetTempPath(), [".mp3"], new DrmPluginLoader([]));
+        var service = new MusicSyncService(proc, [missing]);
+        service.Run();
+        // no exception means success
     }
 }

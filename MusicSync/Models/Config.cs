@@ -1,20 +1,17 @@
-using System.Collections.Generic;
+namespace MusicSync.Models;
 
-namespace MusicSync.Models
+public class Config
 {
-    public class Config
-    {
-        public List<string> music_sources { get; set; } = new();
-        public string music_incoming_dir { get; set; } = "music_incoming";
-        public string database_file { get; set; } = "music_sync.db";
-        public List<DrmPluginConfig> drm_plugins { get; set; } = new();
-        public List<string> music_extensions { get; set; } = new();
-    }
+    public List<string> MusicSources { get; set; } = [];
+    public string MusicIncomingDir { get; set; } = "music_incoming";
+    public string DatabaseFile { get; set; } = "music_sync.db";
+    public List<DrmPluginConfig> DrmPlugins { get; set; } = [];
+    public List<string> MusicExtensions { get; set; } = [];
+}
 
-    public class DrmPluginConfig
-    {
-        public string name { get; set; } = string.Empty;
-        public bool enabled { get; set; }
-        public List<string> extensions { get; set; } = new();
-    }
+public class DrmPluginConfig
+{
+    public string Name { get; init; } = string.Empty;
+    public bool Enabled { get; init; }
+    public List<string> Extensions { get; init; } = [];
 }
