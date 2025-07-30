@@ -12,7 +12,7 @@ public class MusicFileProcessor(
     TemporaryDirectory rootTempDir,
     DrmPluginLoader pluginLoader)
 {
-    private static readonly string[] SourceArray = ["copy_success", "dedrm_success"];
+    private static readonly string[] SuccessResults = ["copy_success", "dedrm_success"];
 
     private readonly string[] _mediaExtensions = config.MusicExtensions.Select(e => e.ToLower()).ToArray();
 
@@ -20,7 +20,7 @@ public class MusicFileProcessor(
     {
         var mtime = new DateTimeOffset(File.GetLastWriteTimeUtc(path)).ToUnixTimeSeconds();
         var prev = db.FindPreviousResult(path, mtime);
-        if (prev != null && SourceArray.Contains(prev))
+        if (prev != null && SuccessResults.Contains(prev))
         {
             db.LogOperation(path, mtime, null, "skip_path_mtime_exists", false);
             return;
@@ -84,7 +84,7 @@ public class MusicFileProcessor(
             return;
         }
 
-        var finalPath = preventOverwrite(dest);
+        var finalPath = PreventOverwrite(dest);
         File.Copy(path, finalPath, true);
         db.RecordMusicHash(hash);
         db.LogOperation(path, mtime, hash, "copy_success");
@@ -117,13 +117,13 @@ public class MusicFileProcessor(
         var targetDir = Path.Join(config.MusicDestDir, Path.GetDirectoryName(relativePath) ?? string.Empty);
         Directory.CreateDirectory(targetDir);
         var destPath = Path.Join(targetDir, name + Path.GetExtension(found));
-        var finalPath = preventOverwrite(destPath);
+        var finalPath = PreventOverwrite(destPath);
         File.Move(found, finalPath, true);
         db.RecordMusicHash(hash);
         db.LogOperation(path, mtime, hash, "dedrm_success");
     }
 
-    private static string preventOverwrite(string path)
+    private static string PreventOverwrite(string path)
     {
         if (!File.Exists(path))
         {
