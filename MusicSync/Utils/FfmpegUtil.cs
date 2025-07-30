@@ -34,7 +34,7 @@ public static partial class FfmpegUtil
         proc.WaitForExit(60000);
         var stderr = proc.StandardError.ReadToEnd();
         var stdout = proc.StandardOutput.ReadToEnd();
-        var match = GetSha256Regex().Match($"{stdout}\n${stderr}");
+        var match = GetSha256Regex().Match($"{stdout}\n{stderr}");
         return match.Success ? $"sha256:{match.Groups[1].Value}" : null;
     }
 
