@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
 using MusicSync.Models;
+using MusicSync.Plugins;
 using MusicSync.Utils;
 
 using System.Diagnostics.CodeAnalysis;

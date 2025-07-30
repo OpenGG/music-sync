@@ -1,6 +1,6 @@
 using System.Linq;
 
-namespace MusicSync.Models
+namespace MusicSync.Plugins
 {
     public class DrmPlugin
     {
@@ -41,7 +41,9 @@ namespace MusicSync.Models
                 var found = System.IO.Directory.GetFiles(tempDir, "*", System.IO.SearchOption.AllDirectories)
                     .FirstOrDefault(f => outputExtensions.Contains(System.IO.Path.GetExtension(f).ToLower()));
                 if (found == null) return null;
-                return found;
+                string dest = System.IO.Path.Combine(System.IO.Path.GetTempPath(), System.IO.Path.GetRandomFileName() + System.IO.Path.GetExtension(found));
+                System.IO.File.Move(found, dest, true);
+                return dest;
             }
             finally
             {

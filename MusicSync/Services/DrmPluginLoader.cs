@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using MusicSync.Models;
+using MusicSync.Plugins;
 using System.Diagnostics.CodeAnalysis;
 
 namespace MusicSync.Services
