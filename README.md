@@ -58,7 +58,7 @@ Coverage results will be placed under the `TestResults` directory.
 See `config.yaml` for an annotated example of all available options, including:
 
 - `music_sources` – directories to scan for music files
-- `music_incoming_dir` – destination directory for processed files
+- `music_dest_dir` – destination directory for processed files
 - `database_file` – SQLite database used for tracking
 - `drm_plugins` – list of DRM plugins and the extensions they handle
 - `music_extensions` – regular audio extensions that are copied directly
