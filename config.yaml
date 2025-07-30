@@ -1,0 +1,44 @@
+# Source directories where your music files are located
+music_sources:
+  - /path/to/music
+  - /path/to/another/music
+  # Add more paths as needed
+
+# Directory where processed (decrypted/copied) music files will be stored
+music_dest_dir: /path/to/your/music_dest
+
+# Path to the SQLite database file for tracking processed files and hashes
+# If this line is commented out or removed, the script will default to 'music_sync.db'
+database_file: ./music_sync.db
+
+# DRM Decryption Plugin Configuration
+# Each entry defines a DRM plugin (a Bash script)
+# - name: Corresponds to the script name. The script will search for this name (with or without common shell extensions)
+#   in the current working directory, then in the script's 'drm_plugins' directory.
+# - enabled: Set to true to activate this plugin
+# - extensions: A list of file extensions this plugin handles (e.g., .ncm)
+drm_plugins:
+  - name: ncmdump # The script will search for "ncmdump" or "ncmdump.sh" etc.
+    enabled: true
+    extensions: [".ncm"]
+  # Example for another DRM type (uncomment and configure if needed)
+  # - name: another_drm_plugin
+  #   enabled: false
+  #   extensions: [".xyz"]
+
+# Supported Regular Audio File Extensions
+# Files with these extensions will be copied directly if not DRM-protected
+music_extensions:
+  - .mp3
+  - .flac
+  - .wav
+  - .ogg
+  - .m4a
+  - .aac
+  - .wma
+  - .aiff
+  - .alac
+  - .opus
+  - .ape
+  - .dsf # DSD format
+  - .dff # DSD format
