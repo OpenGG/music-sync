@@ -29,8 +29,11 @@ public static class TestUtils
 
     public static void SetExecutable(string path)
     {
-#pragma warning disable CA1416
+        if (OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
         File.SetUnixFileMode(path, UnixFileMode.UserExecute | UnixFileMode.UserRead);
-#pragma warning restore CA1416
     }
 }
