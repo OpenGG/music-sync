@@ -20,7 +20,7 @@ public class TemporaryFile : IDisposable
 
     private bool _disposed;
 
-    private string _baseDir;
+    private readonly string _baseDir;
 
     /// <summary>
     /// 初始化 TemporaryFile 的新实例。此构造函数会**自动创建一个唯一的零字节临时文件**。
