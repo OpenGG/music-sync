@@ -18,7 +18,7 @@ public static class Program
         var config = ConfigLoader.Load(configPath);
         var pluginLoader = new DrmPluginLoader(config.DrmPlugins);
 
-        using var db = new DatabaseService(string.IsNullOrEmpty(config.DatabaseFile) ? "music_sync.db" : config.DatabaseFile);
+        using var db = new DatabaseService(config.DatabaseFile);
         var processor = new MusicFileProcessor(db, config, rootTempDir, pluginLoader);
         var service = new MusicSyncService(processor, config.MusicSources);
         service.Run();
