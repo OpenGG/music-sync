@@ -1,4 +1,5 @@
-#!/usr/env/bin bash
+#!/usr/bin/env bash
+set -euo pipefail
 
 # NCM Decryption Bash Script Plugin
 # This script decrypts .ncm files using the 'ncmdump' tool.

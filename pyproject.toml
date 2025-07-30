@@ -1,0 +1,15 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "music-sync"
+version = "0.1.0"
+authors = [{name = "OpenGG"}]
+description = "Simple music synchronization tool with DRM plugin support"
+readme = "README.md"
+requires-python = ">=3.8"
+dependencies = ["PyYAML"]
+
+[project.scripts]
+music-sync = "music_sync.cli:main"
