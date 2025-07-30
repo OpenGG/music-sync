@@ -26,7 +26,7 @@ public class DrmPlugin(string name, string scriptPath)
         var stderr = proc.StandardError.ReadToEnd();
         if (proc.ExitCode != 0)
         {
-            Console.WriteLine($"Plugin error: {stderr.Trim()} {stdout.Trim()}");
+            Console.Error.WriteLine($"Plugin error: {stderr.Trim()} {stdout.Trim()}");
             return null;
         }
 
