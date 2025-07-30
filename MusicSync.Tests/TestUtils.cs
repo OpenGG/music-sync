@@ -2,7 +2,7 @@ using System.Reflection;
 
 namespace MusicSync.Tests;
 
-public class TestUtils
+public static class TestUtils
 {
     private const string
         ResourceName = "MusicSync.Tests.Fixtures.silent_audio.mp3"; // Adjust to your actual namespace and path
@@ -15,7 +15,7 @@ public class TestUtils
         using var stream = assembly.GetManifestResourceStream(ResourceName);
         if (stream == null)
         {
-            throw new NullReferenceException($"{ResourceName} not found");
+            throw new InvalidOperationException($"{ResourceName} not found");
         }
 
         // Now you can read from the stream (e.g., convert to byte array)
