@@ -13,8 +13,7 @@ public static class ConfigLoader
     {
         var possible = new[]
         {
-            configPath,
-            Path.Join(Directory.GetCurrentDirectory(), "config.yaml"),
+            configPath, Path.Join(Directory.GetCurrentDirectory(), "config.yaml"),
             Path.Join(AppContext.BaseDirectory, "config.yaml")
         };
 
@@ -41,7 +40,7 @@ public static class ConfigLoader
         Console.WriteLine("Error: config.yaml not found.");
         var paths = string.Join(", ", possible);
         Console.WriteLine("Tried: " + paths);
-        throw new Exception($"Config.yaml not found in {paths}");
+        throw new FileNotFoundException($"Config.yaml not found in {paths}");
         // Environment.Exit(1);
         // return new Config();
     }
