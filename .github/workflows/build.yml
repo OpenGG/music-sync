@@ -34,7 +34,7 @@ jobs:
             --self-contained true \
             -o ./dist
       - name: Upload artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: MusicSync
           path: dist
