@@ -26,4 +26,11 @@ public class TestUtils
 
         return mp3Data;
     }
+
+    public static void SetExecutable(string path)
+    {
+#pragma warning disable CA1416
+        File.SetUnixFileMode(path, UnixFileMode.UserExecute | UnixFileMode.UserRead);
+#pragma warning restore CA1416
+    }
 }

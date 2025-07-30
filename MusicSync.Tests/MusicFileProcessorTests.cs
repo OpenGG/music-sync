@@ -44,7 +44,7 @@ public class MusicFileProcessorTests
             #!/bin/sh
             cp $1 $2/out.mp3
             """);
-        System.Diagnostics.Process.Start("chmod", $"+x {pluginFile.FilePath}").WaitForExit();
+        TestUtils.SetExecutable(pluginFile.FilePath);
 
         var cfg = new DrmPluginConfig { Name = pluginFile.FilePath, Enabled = true, Extensions = [".ncm"] };
         var loader = new DrmPluginLoader([cfg]);
@@ -104,7 +104,7 @@ public class MusicFileProcessorTests
         using var db = new DatabaseService(dbFile.FilePath);
 
         using var pluginFile = new TemporaryFile(Path.GetRandomFileName()).Create("#!/bin/sh\nexit 1\n");
-        System.Diagnostics.Process.Start("chmod", $"+x {pluginFile.FilePath}").WaitForExit();
+        TestUtils.SetExecutable(pluginFile.FilePath);
 
         var cfg = new DrmPluginConfig { Name = pluginFile.FilePath, Enabled = true, Extensions = [".ncm"] };
         var loader = new DrmPluginLoader([cfg]);
@@ -156,7 +156,7 @@ public class MusicFileProcessorTests
         using var drmFile = srcDir.CreateTemporaryFile("empty.ncm", "data");
 
         using var pluginFile = new TemporaryFile(Path.GetRandomFileName()).Create("#!/bin/sh\nmkdir $2\n");
-        System.Diagnostics.Process.Start("chmod", $"+x {pluginFile.FilePath}").WaitForExit();
+        TestUtils.SetExecutable(pluginFile.FilePath);
 
         var cfg = new DrmPluginConfig { Name = pluginFile.FilePath, Enabled = true, Extensions = [".ncm"] };
         var loader = new DrmPluginLoader([cfg]);

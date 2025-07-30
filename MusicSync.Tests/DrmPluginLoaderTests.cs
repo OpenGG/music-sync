@@ -10,7 +10,7 @@ public class DrmPluginLoaderTests
     {
         var pluginPath = Path.Join(Path.GetTempPath(), Path.GetRandomFileName());
         File.WriteAllText(pluginPath, "echo");
-        System.Diagnostics.Process.Start("chmod", $"+x {pluginPath}").WaitForExit();
+        TestUtils.SetExecutable(pluginPath);
         var cfg = new DrmPluginConfig { Name = pluginPath, Enabled = true, Extensions = [".ncm"] };
         var loader = new DrmPluginLoader([cfg]);
         var plugin = loader.Resolve("file.ncm");
