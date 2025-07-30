@@ -25,12 +25,19 @@ jobs:
         with:
           dotnet-version: '8.0.x'
       - name: Publish executable
-        run: dotnet publish MusicSync/MusicSync.csproj -c Release -o publish
+        run: |
+          ./scripts/test.sh
+          ./scripts/clean.sh
+
+          ./scripts/build.sh \
+            -r linux-x64 \
+            --self-contained true \
+            -o ./dist
       - name: Upload artifact
         uses: actions/upload-artifact@v3
         with:
           name: MusicSync
-          path: publish
+          path: dist
       - name: Determine tag
         if: ${{ inputs.publish == 'true' }}
         id: version
@@ -94,4 +101,4 @@ jobs:
           git config user.email github-actions@users.noreply.github.com
           git tag "$TAG"
           git push origin "$TAG"
-          gh release create "$TAG" --draft --title "$TAG" publish/*
+          gh release create "$TAG" --draft --title "$TAG" dist/*
