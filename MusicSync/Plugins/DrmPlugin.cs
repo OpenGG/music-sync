@@ -11,14 +11,15 @@ public class DrmPlugin(string name, string scriptPath)
     public string? Decrypt(string inputFile, TemporaryDirectory tempDir, string[] outputExtensions)
     {
         Directory.CreateDirectory(tempDir.DirectoryPath);
-        var psi = new System.Diagnostics.ProcessStartInfo(ScriptPath,
-            $"\"{inputFile}\" \"{tempDir.DirectoryPath}\"")
+        var psi = new System.Diagnostics.ProcessStartInfo(ScriptPath)
         {
             RedirectStandardOutput = true,
             RedirectStandardError = true,
             UseShellExecute = false,
             CreateNoWindow = true
         };
+        psi.ArgumentList.Add(inputFile);
+        psi.ArgumentList.Add(tempDir.DirectoryPath);
         using var proc = System.Diagnostics.Process.Start(psi);
         if (proc == null) return null;
         proc.WaitForExit(120000);

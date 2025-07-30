@@ -11,7 +11,7 @@ dotnet test MusicSync.Tests/MusicSync.Tests.csproj --collect:"XPlat Code Coverag
 if ! command -v reportgenerator &> /dev/null; then
   echo "The command 'reportgenerator' not exists."
   echo "Installing reportgenerator"
-  
+
   dotnet tool install --global dotnet-reportgenerator-globaltool
 fi
-reportgenerator -reports:**/TestResults/**/coverage.cobertura.xml -targetdir:CoverageReport -filefilters:"-*Migrations*;-*Generated.cs;-*TypeFactoryGenerator*"
+reportgenerator -reports:**/TestResults/**/coverage.cobertura.xml -targetdir:CoverageReport -filefilters:"-*Migrations*;-*Generated.cs;-*TypeFactoryGenerator*;-*RegexGenerator*"
