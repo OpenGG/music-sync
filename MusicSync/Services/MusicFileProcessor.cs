@@ -133,7 +133,7 @@ public class MusicFileProcessor(
         for (var i = 0; ; ++i)
         {
             var uniqName =
-                $"{Path.GetFileNameWithoutExtension(path)}.{i}.{Path.GetExtension(path)}";
+                $"{Path.GetFileNameWithoutExtension(path)}.{i}{Path.GetExtension(path)}";
 
             var uniqPath =
                 Path.Join(Path.GetDirectoryName(path), uniqName);
