@@ -1,0 +1,28 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MusicSync", "MusicSync\MusicSync.csproj", "{A1E0AE48-F326-456E-9ECF-A48ACA8653F2}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MusicSync.Tests", "MusicSync.Tests\MusicSync.Tests.csproj", "{041057E3-1129-4DF1-9B4F-F98136B034BA}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{A1E0AE48-F326-456E-9ECF-A48ACA8653F2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A1E0AE48-F326-456E-9ECF-A48ACA8653F2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A1E0AE48-F326-456E-9ECF-A48ACA8653F2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A1E0AE48-F326-456E-9ECF-A48ACA8653F2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{041057E3-1129-4DF1-9B4F-F98136B034BA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{041057E3-1129-4DF1-9B4F-F98136B034BA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{041057E3-1129-4DF1-9B4F-F98136B034BA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{041057E3-1129-4DF1-9B4F-F98136B034BA}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal
