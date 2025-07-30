@@ -1,0 +1,97 @@
+name: Build MusicSync
+
+on:
+  push:
+    branches: ['**']
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: 'Create tag and draft release'
+        required: false
+        type: boolean
+        default: false
+      version:
+        description: 'Override base version (e.g. v1.2.3)'
+        required: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Publish executable
+        run: dotnet publish MusicSync/MusicSync.csproj -c Release -o publish
+      - name: Upload artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: MusicSync
+          path: publish
+      - name: Determine tag
+        if: ${{ inputs.publish == 'true' }}
+        id: version
+        run: |
+          git fetch --tags
+          VERSION_INPUT="${{ inputs.version }}"
+          BRANCH="${GITHUB_REF_NAME}"
+          if [[ -n "$VERSION_INPUT" ]]; then
+            BASE=${VERSION_INPUT#v}
+            if [[ "$BRANCH" == "main" ]]; then
+              TAG="v$BASE"
+            else
+              LAST=$(git tag --list "v$BASE-beta.*" | sort -V | tail -n 1)
+              if [[ -z "$LAST" ]]; then
+                BETA=0
+              else
+                NUM=${LAST##*-beta.}
+                BETA=$((NUM+1))
+              fi
+              TAG="v$BASE-beta.$BETA"
+            fi
+          else
+            if [[ "$BRANCH" == "main" ]]; then
+              LAST=$(git tag --list 'v[0-9]*.[0-9]*.[0-9]*' | grep -v 'beta' | sort -V | tail -n 1)
+              if [[ -z "$LAST" ]]; then
+                BASE='0.1.0'
+              else
+                VER=${LAST#v}
+                IFS='.' read -r MAJOR MINOR PATCH <<<"$VER"
+                PATCH=$((PATCH+1))
+                BASE="$MAJOR.$MINOR.$PATCH"
+              fi
+              TAG="v$BASE"
+            else
+              LAST=$(git tag --list 'v[0-9]*.[0-9]*.[0-9]*-beta.[0-9]*' | sort -V | tail -n 1)
+              if [[ -z "$LAST" ]]; then
+                STABLE=$(git tag --list 'v[0-9]*.[0-9]*.[0-9]*' | grep -v 'beta' | sort -V | tail -n 1)
+                if [[ -z "$STABLE" ]]; then
+                  BASE='0.1.0'
+                else
+                  BASE=${STABLE#v}
+                fi
+                BETA=0
+              else
+                WITHOUT_V=${LAST#v}
+                BASE=${WITHOUT_V%%-beta.*}
+                NUM=${WITHOUT_V##*-beta.}
+                BETA=$((NUM+1))
+              fi
+              TAG="v$BASE-beta.$BETA"
+            fi
+          fi
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+      - name: Create tag and draft release
+        if: ${{ inputs.publish == 'true' }}
+        env:
+          TAG: ${{ steps.version.outputs.tag }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git config user.name github-actions
+          git config user.email github-actions@users.noreply.github.com
+          git tag "$TAG"
+          git push origin "$TAG"
+          gh release create "$TAG" --draft --title "$TAG" publish/*
