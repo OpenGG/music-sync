@@ -119,7 +119,6 @@ public sealed class MockFfmpeg : IDisposable
             // 释放托管资源
         }
 
-
         // Restore the PATH variable first.
         if (disposing)
         {
