@@ -6,7 +6,11 @@ cd "$PROJECT_ROOT"
 
 rm -rf "$PROJECT_ROOT/TestResults"
 
-dotnet test MusicSync.Tests/MusicSync.Tests.csproj --collect:"XPlat Code Coverage" --results-directory TestResults "$@"
+dotnet test MusicSync.Tests/MusicSync.Tests.csproj \
+    --collect:"XPlat Code Coverage" \
+    --results-directory TestResults \
+    -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.ExcludeByFile="**/obj/**" \
+    "$@"
 
 if ! command -v reportgenerator &> /dev/null; then
   echo "The command 'reportgenerator' not exists."
@@ -14,4 +18,9 @@ if ! command -v reportgenerator &> /dev/null; then
 
   dotnet tool install --global dotnet-reportgenerator-globaltool
 fi
-reportgenerator -reports:**/TestResults/**/coverage.cobertura.xml -targetdir:CoverageReport -filefilters:"-*Migrations*;-*Generated.cs;-*TypeFactoryGenerator*;-*RegexGenerator*"
+
+reportgenerator \
+    -reports:**/TestResults/**/coverage.cobertura.xml \
+    -targetdir:CoverageReport \
+    -filefilters:"-*Migrations*;-*Generated.cs;-*TypeFactoryGenerator*;-*RegexGenerator*"
+

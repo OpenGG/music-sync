@@ -4,7 +4,6 @@ using MusicSync.Plugins;
 
 namespace MusicSync.Services;
 
-[ExcludeFromCodeCoverage]
 public class DrmPluginLoader
 {
     private readonly Dictionary<string, DrmPluginConfig> _extToConfig = new();

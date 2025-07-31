@@ -1,8 +1,8 @@
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Text.RegularExpressions;
 
 namespace MusicSync.Utils;
-
 public static partial class FfmpegUtil
 {
     /// <summary>
@@ -97,30 +97,38 @@ public static partial class FfmpegUtil
     private static (string stdout, string stderr, int exitCode) RunFfmpegProcess(ProcessStartInfo psi,
         int? timeout = null)
     {
-        using var proc = Process.Start(psi);
-        if (proc == null)
+        try
         {
-            throw new Exception(
-                $"Failed to start ffmpeg process for command: {psi.FileName} {string.Join(" ", psi.ArgumentList)}");
+            using var proc = Process.Start(psi);
+            if (proc == null)
+            {
+                throw new Exception(
+                    $"Failed to start ffmpeg process for command: {psi.FileName} {string.Join(" ", psi.ArgumentList)}");
+            }
+
+            // It's generally better to wait for exit before reading streams to avoid deadlocks
+            // However, for short-lived processes like these, reading after a timeout is usually safe.
+            // For very large outputs, asynchronous reads or separate threads might be needed.
+            proc.WaitForExit(timeout ?? 60000); // Wait up to 60 seconds
+
+            var stdout = proc.StandardOutput.ReadToEnd();
+            var stderr = proc.StandardError.ReadToEnd();
+
+            // Ensure the process has truly exited before checking ExitCode
+            if (proc.HasExited)
+            {
+                return (stdout, stderr, proc.ExitCode);
+            }
+
+            proc.Kill(); // Terminate if it's still running
+            throw new TimeoutException(
+                $"ffmpeg process did not exit within 60 seconds for command: {psi.FileName} {string.Join(" ", psi.ArgumentList)}");
         }
-
-        // It's generally better to wait for exit before reading streams to avoid deadlocks
-        // However, for short-lived processes like these, reading after a timeout is usually safe.
-        // For very large outputs, asynchronous reads or separate threads might be needed.
-        proc.WaitForExit(timeout ?? 60000); // Wait up to 60 seconds
-
-        var stdout = proc.StandardOutput.ReadToEnd();
-        var stderr = proc.StandardError.ReadToEnd();
-
-        // Ensure the process has truly exited before checking ExitCode
-        if (proc.HasExited)
+        catch (Win32Exception e) when (e.NativeErrorCode == 2)
         {
-            return (stdout, stderr, proc.ExitCode);
+            throw new FileNotFoundException(
+                "ffmpeg executable not found. Please ensure ffmpeg is installed and added to your system's PATH.", e);
         }
-
-        proc.Kill(); // Terminate if it's still running
-        throw new TimeoutException(
-            $"ffmpeg process did not exit within 60 seconds for command: {psi.FileName} {string.Join(" ", psi.ArgumentList)}");
     }
 
     /// <summary>

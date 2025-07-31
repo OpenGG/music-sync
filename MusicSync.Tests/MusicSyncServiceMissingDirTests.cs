@@ -9,7 +9,8 @@ public class MusicSyncServiceMissingDirTests
     [Fact]
     public void Run_IgnoresMissingDir()
     {
-        using var srcDir = new TemporaryDirectory().Create();
+        using var srcDir = new TemporaryDirectory();
+        var missingPath = srcDir.DirectoryPath;
         using var destDir = new TemporaryDirectory();
         using var tempDir = new TemporaryDirectory();
 
@@ -23,7 +24,7 @@ public class MusicSyncServiceMissingDirTests
             MusicExtensions = [".mp3"]
         };
         var proc = new MusicFileProcessor(db, config, tempDir, new DrmPluginLoader([]));
-        var service = new MusicSyncService(proc, [srcDir.DirectoryPath]);
+        var service = new MusicSyncService(proc, [missingPath]);
         service.Run();
 
         Assert.False(Directory.Exists(destDir.DirectoryPath));
