@@ -9,6 +9,8 @@ public static class Program
 {
     public static int Main(string[] args)
     {
+        FfmpegUtil.CheckFfmpeg();
+
         string? configPath = null;
         if (args.Length >= 2 && (args[0] == "-c" || args[0] == "--config"))
             configPath = args[1];
