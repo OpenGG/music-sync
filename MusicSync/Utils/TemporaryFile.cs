@@ -1,7 +1,8 @@
-namespace MusicSync.Utils;
-
 using System;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
+
+namespace MusicSync.Utils;
 
 /// <summary>
 /// 表示一个临时文件，并在 Dispose 时自动删除。
@@ -16,7 +17,6 @@ public class TemporaryFile : IDisposable
     /// 获取临时文件的完整路径。
     /// </summary>
     public string FilePath { get; }
-
 
     private bool _disposed;
 
@@ -86,6 +86,7 @@ public class TemporaryFile : IDisposable
         _disposed = true;
     }
 
+    [ExcludeFromCodeCoverage]
     ~TemporaryFile()
     {
         Dispose(false);

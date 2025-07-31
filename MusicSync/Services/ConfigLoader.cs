@@ -6,7 +6,6 @@ using YamlDotNet.Serialization.NamingConventions;
 
 namespace MusicSync.Services;
 
-[ExcludeFromCodeCoverage]
 public static class ConfigLoader
 {
     public static Config Load(string? configPath)
