@@ -30,6 +30,9 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '8.0.x'
+      - name: Install ffmpeg
+        run: |
+          sudo apt-get install -y ffmpeg
       - name: Start Debug Session (if enabled)
         if: ${{ inputs.remote_debug }}
         uses: lhotari/action-upterm@v1

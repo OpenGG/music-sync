@@ -3,7 +3,6 @@ using Microsoft.Data.Sqlite;
 
 namespace MusicSync.Services;
 
-[ExcludeFromCodeCoverage]
 public class DatabaseService : IDisposable
 {
     private readonly SqliteConnection _connection;

@@ -6,7 +6,6 @@ using MusicSync.Utils;
 
 namespace MusicSync.Services;
 
-[ExcludeFromCodeCoverage]
 public class MusicFileProcessor(
     DatabaseService db,
     Config config,
