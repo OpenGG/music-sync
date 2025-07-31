@@ -43,6 +43,7 @@ public static class TestUtils
 public sealed class MockPath : IDisposable
 {
     private readonly string _originalPath;
+    private bool _disposed;
 
     public MockPath(string path, bool? cleanMode = false)
     {
@@ -65,14 +66,16 @@ public sealed class MockPath : IDisposable
     // 'disposing' will be 'true' when called from the public Dispose method.
     private void Dispose(bool disposing)
     {
-        if (!disposing)
+        if (_disposed) return;
+        if (disposing)
         {
-            return;
+            // 释放托管资源
         }
-
 
         // Restore the PATH variable first.
         Environment.SetEnvironmentVariable("PATH", _originalPath);
+
+        _disposed = true;
     }
 
     [ExcludeFromCodeCoverage]
@@ -87,6 +90,7 @@ public sealed class MockFfmpeg : IDisposable
     private MockPath? _mockPath;
     private TemporaryDirectory? _tempDir;
     private TemporaryFile? _ffmpegFile;
+    private bool _disposed;
 
     public MockFfmpeg(string content)
     {
@@ -109,9 +113,10 @@ public sealed class MockFfmpeg : IDisposable
     // 'disposing' will be 'true' when called from the public Dispose method.
     private void Dispose(bool disposing)
     {
-        if (!disposing)
+        if (_disposed) return;
+        if (disposing)
         {
-            return;
+            // 释放托管资源
         }
 
 
@@ -128,15 +133,15 @@ public sealed class MockFfmpeg : IDisposable
             _ffmpegFile = null;
         }
 
-        if (_tempDir == null)
+        if (_tempDir != null)
         {
-            return;
+            // There are no unmanaged resources here to clean up,
+            // but if there were, they would go here regardless of the 'disposing' value.
+            _tempDir.Dispose();
+            _tempDir = null; // Set to null to prevent double-disposing.
         }
 
-        _tempDir.Dispose();
-        _tempDir = null; // Set to null to prevent double-disposing.
-        // There are no unmanaged resources here to clean up,
-        // but if there were, they would go here regardless of the 'disposing' value.
+        _disposed = true;
     }
 
     [ExcludeFromCodeCoverage]

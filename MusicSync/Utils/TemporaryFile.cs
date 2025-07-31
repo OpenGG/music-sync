@@ -18,7 +18,6 @@ public class TemporaryFile : IDisposable
     /// </summary>
     public string FilePath { get; }
 
-
     private bool _disposed;
 
     private readonly string _baseDir;
