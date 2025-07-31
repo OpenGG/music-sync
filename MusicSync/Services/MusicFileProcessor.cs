@@ -41,7 +41,7 @@ public class MusicFileProcessor(
         else
         {
             db.LogOperation(path, mtime, null, "unsupported_type");
-            Console.WriteLine($"Skipping unsupported file type: {path}");
+            Console.Error.WriteLine($"Skipping unsupported file type: {path}");
         }
     }
 
@@ -62,7 +62,7 @@ public class MusicFileProcessor(
         }
         catch (Exception e)
         {
-            Console.WriteLine($"Error GetMusicHash(): {e}");
+            Console.Error.WriteLine($"Error GetMusicHash(): {e}");
         }
 
         try
@@ -72,7 +72,7 @@ public class MusicFileProcessor(
         }
         catch (Exception e)
         {
-            Console.WriteLine($"Error GetMusicHash fallback: {e}");
+            Console.Error.WriteLine($"Error GetMusicHash fallback: {e}");
             return null;
         }
     }
