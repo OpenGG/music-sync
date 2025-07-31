@@ -45,7 +45,7 @@ public sealed class MockPath : IDisposable
     private readonly string _originalPath;
     private bool _disposed;
 
-    public MockPath(string path, bool? cleanMode = false)
+    public MockPath(string path, bool cleanMode = false)
     {
         _originalPath = Environment.GetEnvironmentVariable("PATH") ?? "";
 
