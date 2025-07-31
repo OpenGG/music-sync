@@ -13,6 +13,12 @@ on:
       version:
         description: 'Override base version (e.g. v1.2.3)'
         required: false
+      remote_debug:
+        description: >-
+          Starts an SSH session to debug the runner. For advanced troubleshooting only.
+        type: boolean
+        required: false
+        default: false
 
 jobs:
   build:
@@ -24,6 +30,9 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '8.0.x'
+      - name: Start Debug Session (if enabled)
+        if: ${{ inputs.remote_debug }}
+        uses: lhotari/action-upterm@v1
       - name: Publish executable
         run: |
           ./scripts/test.sh
