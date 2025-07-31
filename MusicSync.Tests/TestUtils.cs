@@ -121,24 +121,17 @@ public sealed class MockFfmpeg : IDisposable
 
 
         // Restore the PATH variable first.
-        if (_mockPath != null)
+        if (disposing)
         {
-            _mockPath.Dispose();
+            // Dispose managed resources
+            _mockPath?.Dispose();
             _mockPath = null;
-        }
 
-        if (_ffmpegFile != null)
-        {
-            _ffmpegFile.Dispose();
+            _ffmpegFile?.Dispose();
             _ffmpegFile = null;
-        }
 
-        if (_tempDir != null)
-        {
-            // There are no unmanaged resources here to clean up,
-            // but if there were, they would go here regardless of the 'disposing' value.
-            _tempDir.Dispose();
-            _tempDir = null; // Set to null to prevent double-disposing.
+            _tempDir?.Dispose();
+            _tempDir = null;
         }
 
         _disposed = true;
