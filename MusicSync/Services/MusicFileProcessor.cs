@@ -1,4 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
+using System.Security.Cryptography;
 using MusicSync.Models;
 using MusicSync.Plugins;
 using MusicSync.Utils;
@@ -55,14 +56,25 @@ public class MusicFileProcessor(
         try
         {
             var hash = FfmpegUtil.GetAudioHash(filepath);
-            return hash;
-            // return string.IsNullOrEmpty(hash) ? ComputeHash(filepath, hash.Create()) : hash;
+            if (!string.IsNullOrEmpty(hash))
+            {
+                return hash;
+            }
         }
         catch (Exception e)
         {
             Console.WriteLine($"Error GetMusicHash(): {e}");
+        }
+
+        try
+        {
+            using var sha = SHA256.Create();
+            return $"sha256:{HashUtil.ComputeHash(filepath, sha)}";
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine($"Error GetMusicHash fallback: {e}");
             return null;
-            // return ComputeHash(filepath, hash.Create());
         }
     }
 
