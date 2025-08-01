@@ -11,7 +11,7 @@ public class Config
 
 public class DrmPluginConfig
 {
-    public string Name { get; init; } = string.Empty;
-    public bool Enabled { get; init; }
-    public List<string> Extensions { get; init; } = [];
+    public string Name { get; set; } = string.Empty;
+    public bool Enabled { get; set; }
+    public List<string> Extensions { get; set; } = [];
 }
