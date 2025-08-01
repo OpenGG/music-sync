@@ -1,6 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using MusicSync.Services;
 using MusicSync.Utils;
+using YamlDotNet.Core;
 
 namespace MusicSync;
 
