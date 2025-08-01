@@ -29,24 +29,31 @@ public static class Program
         }
         catch (FileNotFoundException e)
         {
-            // Handle the case where the config file is missing
-            Console.Error.WriteLine($"Error: file not found\n  {e}");
-
+            Console.Error.WriteLine("Error: The specified configuration file could not be found.");
+            Console.Error.WriteLine($"File path: {e.FileName}");
             Console.Error.WriteLine($"Error details: {e.Message}");
-
-            // Optionally, log the full stack trace for debugging
+            Console.Error.WriteLine("\n--- Stack Trace ---");
             Console.Error.WriteLine(e.StackTrace);
+            return 1;
+        }
+        catch (YamlException yamlEx)
+        {
+            // This catch block specifically handles errors from the YAML parser
+            Console.Error.WriteLine("Unhandled Exception: Configuration file parsing error.");
+            Console.Error.WriteLine($"Error details: The configuration file has a syntax or formatting error.");
+            Console.Error.WriteLine($"The error occurred at line {yamlEx.Start.Line}, column {yamlEx.Start.Column}.");
+            Console.Error.WriteLine($"Parser message: {yamlEx.Message}");
+            Console.Error.WriteLine("\n--- Stack Trace ---");
+            Console.Error.WriteLine(yamlEx.StackTrace);
             return 1;
         }
         catch (Exception ex)
         {
-            // Catch any other deserialization errors
-            Console.Error.WriteLine("Unhandled Exception: Exception during execution");
+            // This is a generic fallback for any other unhandled exception.
+            Console.Error.WriteLine("Unhandled Exception: An unexpected error occurred during execution.");
             Console.Error.WriteLine($"Error details: {ex.Message}");
-
-            // Optionally, log the full stack trace for debugging
+            Console.Error.WriteLine("\n--- Stack Trace ---");
             Console.Error.WriteLine(ex.StackTrace);
-
             return 1;
         }
     }
