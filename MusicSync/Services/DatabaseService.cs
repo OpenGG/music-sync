@@ -1,4 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
 using Microsoft.Data.Sqlite;
 
 namespace MusicSync.Services;

@@ -1,0 +1,32 @@
+{
+    "music_sources": [
+        "/path/to/music",
+        "/path/to/another/music"
+    ],
+    "music_dest_dir": "/path/to/your/music_dest",
+    "database_file": "./music_sync.db",
+    "drm_plugins": [
+        {
+            "name": "ncmdump",
+            "enabled": true,
+            "extensions": [
+                ".ncm"
+            ]
+        }
+    ],
+    "music_extensions": [
+        ".mp3",
+        ".flac",
+        ".wav",
+        ".ogg",
+        ".m4a",
+        ".aac",
+        ".wma",
+        ".aiff",
+        ".alac",
+        ".opus",
+        ".ape",
+        ".dsf",
+        ".dff"
+    ]
+}

@@ -23,11 +23,11 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\MusicSync\MusicSync.csproj" />
+    <ProjectReference Include="../MusicSync/MusicSync.csproj" />
   </ItemGroup>
 
   <ItemGroup>
-    <EmbeddedResource Include="Fixtures\silent_audio.mp3" />
+    <EmbeddedResource Include="Fixtures/silent_audio.mp3" />
   </ItemGroup>
 
 </Project>

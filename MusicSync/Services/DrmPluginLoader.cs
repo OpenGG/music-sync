@@ -1,4 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
 using MusicSync.Models;
 using MusicSync.Plugins;
 

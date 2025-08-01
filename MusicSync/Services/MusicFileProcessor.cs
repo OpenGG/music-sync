@@ -1,4 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
 using System.Security.Cryptography;
 using MusicSync.Models;
 using MusicSync.Plugins;

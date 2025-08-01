@@ -1,5 +1,4 @@
 using MusicSync.Utils;
-using System.IO;
 
 namespace MusicSync.Tests;
 

@@ -49,7 +49,7 @@ public sealed class MockPath : IDisposable
     {
         _originalPath = Environment.GetEnvironmentVariable("PATH") ?? "";
 
-        var newPath = cleanMode == true ? path : $"{path}:{_originalPath}";
+        var newPath = cleanMode ? path : $"{path}:{_originalPath}";
 
         Environment.SetEnvironmentVariable("PATH", newPath);
     }
