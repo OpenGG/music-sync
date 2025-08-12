@@ -26,14 +26,13 @@ public class FileProcessingPipeline(
 
         var linkOptions = new DataflowLinkOptions { PropagateCompletion = true };
 
-        // Block 1: Initial check - File path to FileContext
+        // Block 1: Initial check - File path to FileContext?
         var metadataCheckBlock = new TransformBlock<string, FileContext?>(async path =>
         {
             var mtime = new DateTimeOffset(File.GetLastWriteTimeUtc(path)).ToUnixTimeSeconds();
             if (await db.CheckMetadataExistsAsync(path, mtime))
             {
-                // Already processed and up-to-date, skip everything.
-                return null;
+                return null; // Already processed and up-to-date, skip.
             }
 
             return new FileContext
@@ -46,30 +45,30 @@ public class FileProcessingPipeline(
         }, new ExecutionDataflowBlockOptions { MaxDegreeOfParallelism = MaxIoConcurrency });
 
         // Block 2: DRM handling and file type validation
-        var drmBlock = new TransformBlock<FileContext, FileContext>(context =>
+        var drmBlock = new TransformBlock<FileContext?, FileContext?>(context =>
         {
-            var plugin = pluginLoader.Resolve(context.FilePath);
-            string? processingPath;
+            if (context == null) return null;
 
+            var plugin = pluginLoader.Resolve(context.FilePath);
             if (plugin != null)
             {
                 context.DrmPlugin = plugin;
                 var tempDir = rootTempDir.CreateTemporaryDirectory();
-                processingPath = plugin.Decrypt(context.FilePath, tempDir, config.MusicExtensions.ToArray());
+                var processingPath = plugin.Decrypt(context.FilePath, tempDir, config.MusicExtensions.ToArray());
 
                 if (processingPath == null)
                 {
                     context.Status = ProcessingStatus.DrmFailure;
-                    return context; // Failed, pass to sink
                 }
-
-                context.Status = ProcessingStatus.DrmSuccess;
-                context.DecryptedFilePath = processingPath;
+                else
+                {
+                    context.Status = ProcessingStatus.DrmSuccess;
+                    context.DecryptedFilePath = processingPath;
+                }
             }
             else if (config.MusicExtensions.Contains(Path.GetExtension(context.FilePath).ToLower()))
             {
-                // This is a standard, non-DRM music file
-                context.DecryptedFilePath = context.FilePath;
+                context.DecryptedFilePath = context.FilePath; // Standard music file
             }
             else
             {
@@ -80,16 +79,10 @@ public class FileProcessingPipeline(
         }, new ExecutionDataflowBlockOptions { MaxDegreeOfParallelism = MaxCpuConcurrency });
 
         // Block 3: Content & Fingerprint Hashing
-        var hashBlock = new TransformBlock<FileContext, FileContext>(async context =>
+        var hashBlock = new TransformBlock<FileContext?, FileContext?>(async context =>
         {
-            if (context.Status is ProcessingStatus.DrmFailure or ProcessingStatus.Unsupported)
+            if (context?.DecryptedFilePath == null || context.Status is not (ProcessingStatus.Pending or ProcessingStatus.DrmSuccess))
             {
-                return context;
-            }
-
-            if (context.DecryptedFilePath == null)
-            {
-                context.Status = ProcessingStatus.HashFailure; // Should not happen
                 return context;
             }
 
@@ -99,8 +92,6 @@ public class FileProcessingPipeline(
 
             try
             {
-                await Task.WhenAll(contentHashTask, fingerprintTask);
-
                 context.ContentHash = await contentHashTask;
                 context.AudioFingerprint = await fingerprintTask;
 
@@ -118,14 +109,14 @@ public class FileProcessingPipeline(
         }, new ExecutionDataflowBlockOptions { MaxDegreeOfParallelism = MaxCpuConcurrency });
 
         // Block 4: Check if hashes already exist in DB
-        var hashCheckBlock = new TransformBlock<FileContext, FileContext>(async context =>
+        var hashCheckBlock = new TransformBlock<FileContext?, FileContext?>(async context =>
         {
-            if (context.Status is not (ProcessingStatus.ContentCheck or ProcessingStatus.DrmSuccess or ProcessingStatus.Pending))
+            if (context?.ContentHash == null || context.AudioFingerprint == null || context.Status != ProcessingStatus.ContentCheck)
             {
-                return context; // Pass through failures
+                return context;
             }
 
-            var (contentHashExists, audioFingerprintExists) = await db.CheckHashesAsync(context.ContentHash!, context.AudioFingerprint!);
+            var (contentHashExists, audioFingerprintExists) = await db.CheckHashesAsync(context.ContentHash, context.AudioFingerprint);
 
             if (contentHashExists) context.Status = ProcessingStatus.SkippedContent;
             else if (audioFingerprintExists) context.Status = ProcessingStatus.SkippedFingerprint;
@@ -134,27 +125,27 @@ public class FileProcessingPipeline(
         }, new ExecutionDataflowBlockOptions { MaxDegreeOfParallelism = MaxIoConcurrency });
 
         // Block 5: Copy file to destination
-        var copyBlock = new TransformBlock<FileContext, FileContext>(context =>
+        var copyBlock = new TransformBlock<FileContext?, FileContext?>(context =>
         {
-            if (context.Status is not (ProcessingStatus.ContentCheck or ProcessingStatus.DrmSuccess or ProcessingStatus.Pending))
+            if (context?.DecryptedFilePath == null || context.Status is not (ProcessingStatus.ContentCheck or ProcessingStatus.DrmSuccess))
             {
-                return context; // Pass through things that should be skipped or failed
+                 return context;
             }
 
             var name = Path.GetFileNameWithoutExtension(context.FilePath);
             var targetDir = Path.Join(config.MusicDestDir, Path.GetDirectoryName(context.RelativePath) ?? string.Empty);
             Directory.CreateDirectory(targetDir);
 
-            var destPath = Path.Join(targetDir, name + Path.GetExtension(context.DecryptedFilePath!));
+            var destPath = Path.Join(targetDir, name + Path.GetExtension(context.DecryptedFilePath));
             var finalPath = PreventOverwrite(destPath);
 
-            if (context.DrmPlugin != null) // It was a decrypted file
+            if (context.DecryptedFilePath != context.FilePath) // It was a decrypted temp file
             {
-                File.Move(context.DecryptedFilePath!, finalPath, true);
+                File.Move(context.DecryptedFilePath, finalPath, true);
             }
             else
             {
-                File.Copy(context.DecryptedFilePath!, finalPath, true);
+                File.Copy(context.DecryptedFilePath, finalPath, true);
             }
 
             context.Status = ProcessingStatus.Processed;
@@ -162,15 +153,17 @@ public class FileProcessingPipeline(
         }, new ExecutionDataflowBlockOptions { MaxDegreeOfParallelism = MaxIoConcurrency });
 
         // Final Block: Update database with results
-        var finalBlock = new ActionBlock<FileContext>(async context =>
+        var finalBlock = new ActionBlock<FileContext?>(async context =>
         {
-            await db.BatchUpsertRecordsAsync([context]);
+            if (context != null)
+            {
+                await db.BatchUpsertRecordsAsync([context]);
+            }
         }, new ExecutionDataflowBlockOptions { MaxDegreeOfParallelism = MaxIoConcurrency });
 
-        // Linking the pipeline
-        metadataCheckBlock.LinkTo(DataflowBlock.NullTarget<FileContext?>(), context => context == null);
-        metadataCheckBlock.LinkTo(drmBlock, linkOptions, context => context != null);
-
+        // Linking the pipeline: A simple linear flow. Nulls or failed items are passed along
+        // and filtered out by subsequent blocks.
+        metadataCheckBlock.LinkTo(drmBlock, linkOptions);
         drmBlock.LinkTo(hashBlock, linkOptions);
         hashBlock.LinkTo(hashCheckBlock, linkOptions);
         hashCheckBlock.LinkTo(copyBlock, linkOptions);

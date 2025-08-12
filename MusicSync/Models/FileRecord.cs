@@ -9,7 +9,7 @@ public class FileRecord
     [Key]
     public int Id { get; set; }
     [Required]
-    public string AbsolutePath { get; set; }
+    public required string AbsolutePath { get; set; }
     [Required]
     public long MTime { get; set; }
     public string? ContentHash { get; set; }

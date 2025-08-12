@@ -10,12 +10,12 @@ namespace MusicSync.Tests;
 
 public class FileProcessingPipelineTests : IAsyncLifetime
 {
-    private SqliteConnection _connection;
-    private DatabaseService _dbService;
-    private Mock<HashService> _mockHashService;
-    private Mock<DrmPluginLoader> _mockDrmPluginLoader;
-    private Config _config;
-    private TemporaryDirectory _tempDir;
+    private SqliteConnection _connection = null!;
+    private DatabaseService _dbService = null!;
+    private Mock<HashService> _mockHashService = null!;
+    private Mock<DrmPluginLoader> _mockDrmPluginLoader = null!;
+    private Config _config = null!;
+    private TemporaryDirectory _tempDir = null!;
     private string SourceDir => Path.Combine(_tempDir.DirectoryPath, "source");
 
     public async Task InitializeAsync()
@@ -58,7 +58,7 @@ public class FileProcessingPipelineTests : IAsyncLifetime
     {
         using var tempFile = new TemporaryFile("test.mp3", SourceDir).Create();
         var mtime = new DateTimeOffset(File.GetLastWriteTimeUtc(tempFile.FilePath)).ToUnixTimeSeconds();
-        await _dbService.BatchUpsertRecordsAsync(new[] { new FileContext { FilePath = tempFile.FilePath, MTime = mtime } });
+        await _dbService.BatchUpsertRecordsAsync(new[] { new FileContext { FilePath = tempFile.FilePath, RelativePath = Path.GetRelativePath(SourceDir, tempFile.FilePath), MTime = mtime } });
 
         var pipeline = new FileProcessingPipeline(_config, _mockDrmPluginLoader.Object, _tempDir, SourceDir);
         var (head, completion) = pipeline.CreatePipeline(_dbService, _mockHashService.Object);
@@ -178,7 +178,7 @@ public class FileProcessingPipelineTests : IAsyncLifetime
 
         _mockDrmPluginLoader.Setup(loader => loader.Resolve(tempFile.FilePath)).Returns(mockPlugin.Object);
         mockPlugin.Setup(p => p.Decrypt(It.IsAny<string>(), It.IsAny<TemporaryDirectory>(), It.IsAny<string[]>()))
-                  .Returns((string)null); // Simulate decryption failure
+                  .Returns((string?)null); // Simulate decryption failure
 
         var dbMock = new Mock<DatabaseService>(_connection) { CallBase = true };
         var pipeline = new FileProcessingPipeline(_config, _mockDrmPluginLoader.Object, _tempDir, SourceDir);
@@ -275,5 +275,30 @@ public class FileProcessingPipelineTests : IAsyncLifetime
         await completion;
 
         Assert.True(File.Exists(Path.Combine(_config.MusicDestDir, "test (1).mp3")));
+    }
+    [Fact]
+    public async Task PreventOverwrite_WithMultipleExistingFiles_CreatesCorrectlyNumberedFile()
+    {
+        using var tempFile = new TemporaryFile("test.mp3", SourceDir).Create();
+        _mockHashService.Setup(h => h.ComputeContentHashAsync(tempFile.FilePath)).ReturnsAsync("content_hash_2");
+        _mockHashService.Setup(h => h.ComputeAudioFingerprintAsync(tempFile.FilePath)).ReturnsAsync("fingerprint_2");
+
+        var dbMock = new Mock<DatabaseService>(_connection) { CallBase = true };
+        dbMock.Setup(db => db.CheckHashesAsync(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync((false, false));
+
+        // Create multiple existing files in the destination
+        var destFilePath = Path.Combine(_config.MusicDestDir, "test.mp3");
+        var destFilePath1 = Path.Combine(_config.MusicDestDir, "test (1).mp3");
+        File.WriteAllText(destFilePath, "original");
+        File.WriteAllText(destFilePath1, "original (1)");
+
+        var pipeline = new FileProcessingPipeline(_config, _mockDrmPluginLoader.Object, _tempDir, SourceDir);
+        var (head, completion) = pipeline.CreatePipeline(dbMock.Object, _mockHashService.Object);
+
+        await head.SendAsync(tempFile.FilePath);
+        head.Complete();
+        await completion;
+
+        Assert.True(File.Exists(Path.Combine(_config.MusicDestDir, "test (2).mp3")));
     }
 }

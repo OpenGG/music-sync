@@ -4,9 +4,9 @@ namespace MusicSync.Models;
 
 public class FileContext
 {
-    public string FilePath { get; init; }
+    public required string FilePath { get; init; }
     public long MTime { get; init; }
-    public string RelativePath { get; set; }
+    public required string RelativePath { get; set; }
     public string? ContentHash { get; set; } // BLAKE3
     public string? AudioFingerprint { get; set; } // SHA256
     public ProcessingStatus Status { get; set; }

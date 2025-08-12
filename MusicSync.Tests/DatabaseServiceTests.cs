@@ -6,8 +6,8 @@ namespace MusicSync.Tests;
 
 public class DatabaseServiceTests : IAsyncLifetime
 {
-    private SqliteConnection _connection;
-    private DatabaseService _dbService;
+    private SqliteConnection _connection = null!;
+    private DatabaseService _dbService = null!;
 
     public async Task InitializeAsync()
     {
@@ -28,22 +28,22 @@ public class DatabaseServiceTests : IAsyncLifetime
     {
         var command = _connection.CreateCommand();
         command.CommandText = "SELECT name FROM sqlite_master WHERE type='table' AND name='FileRecords';";
-        Assert.Equal("FileRecords", await command.ExecuteScalarAsync() as string);
+        Assert.Equal("FileRecords", (await command.ExecuteScalarAsync())!);
 
         command.CommandText = "SELECT name FROM sqlite_master WHERE type='index' AND name='IDX_FileRecords_Path';";
-        Assert.Equal("IDX_FileRecords_Path", await command.ExecuteScalarAsync() as string);
+        Assert.Equal("IDX_FileRecords_Path", (await command.ExecuteScalarAsync())!);
 
         command.CommandText = "SELECT name FROM sqlite_master WHERE type='index' AND name='IDX_FileRecords_ContentHash';";
-        Assert.Equal("IDX_FileRecords_ContentHash", await command.ExecuteScalarAsync() as string);
+        Assert.Equal("IDX_FileRecords_ContentHash", (await command.ExecuteScalarAsync())!);
 
         command.CommandText = "SELECT name FROM sqlite_master WHERE type='index' AND name='IDX_FileRecords_AudioFingerprint';";
-        Assert.Equal("IDX_FileRecords_AudioFingerprint", await command.ExecuteScalarAsync() as string);
+        Assert.Equal("IDX_FileRecords_AudioFingerprint", (await command.ExecuteScalarAsync())!);
     }
 
     [Fact]
     public async Task CheckMetadataExistsAsync_ShouldReturnCorrectly()
     {
-        var record = new FileContext { FilePath = "/test.mp3", MTime = 12345 };
+        var record = new FileContext { FilePath = "/test.mp3", RelativePath = "test.mp3", MTime = 12345 };
         await _dbService.BatchUpsertRecordsAsync(new[] { record });
 
         Assert.True(await _dbService.CheckMetadataExistsAsync("/test.mp3", 12345));
@@ -58,7 +58,7 @@ public class DatabaseServiceTests : IAsyncLifetime
     [InlineData("ch2", "af2", false, false)]// Neither exists
     public async Task CheckHashesAsync_ShouldReturnCorrectly_ForVariousCombinations(string contentHash, string audioFingerprint, bool expectedContent, bool expectedFingerprint)
     {
-        var record = new FileContext { FilePath = "/test.mp3", MTime = 1, ContentHash = "ch1", AudioFingerprint = "af1" };
+        var record = new FileContext { FilePath = "/test.mp3", RelativePath = "test.mp3", MTime = 1, ContentHash = "ch1", AudioFingerprint = "af1" };
         await _dbService.BatchUpsertRecordsAsync(new[] { record });
 
         var (contentExists, fingerprintExists) = await _dbService.CheckHashesAsync(contentHash, audioFingerprint);
@@ -72,8 +72,8 @@ public class DatabaseServiceTests : IAsyncLifetime
     {
         var records = new List<FileContext>
         {
-            new() { FilePath = "/path1.mp3", MTime = 1, ContentHash = "ch1", AudioFingerprint = "af1", Status = ProcessingStatus.Processed },
-            new() { FilePath = "/path2.mp3", MTime = 2, ContentHash = "ch2", AudioFingerprint = "af2", Status = ProcessingStatus.SkippedContent }
+            new() { FilePath = "/path1.mp3", RelativePath = "path1.mp3", MTime = 1, ContentHash = "ch1", AudioFingerprint = "af1", Status = ProcessingStatus.Processed },
+            new() { FilePath = "/path2.mp3", RelativePath = "path2.mp3", MTime = 2, ContentHash = "ch2", AudioFingerprint = "af2", Status = ProcessingStatus.SkippedContent }
         };
 
         await _dbService.BatchUpsertRecordsAsync(records);
@@ -92,10 +92,10 @@ public class DatabaseServiceTests : IAsyncLifetime
     [Fact]
     public async Task BatchUpsertRecordsAsync_ShouldUpdateExistingRecords()
     {
-        var initialRecord = new FileContext { FilePath = "/test.mp3", MTime = 1, ContentHash = "ch_old", AudioFingerprint = "af_old", Status = ProcessingStatus.Processed };
+        var initialRecord = new FileContext { FilePath = "/test.mp3", RelativePath = "test.mp3", MTime = 1, ContentHash = "ch_old", AudioFingerprint = "af_old", Status = ProcessingStatus.Processed };
         await _dbService.BatchUpsertRecordsAsync(new[] { initialRecord });
 
-        var updatedRecord = new FileContext { FilePath = "/test.mp3", MTime = 2, ContentHash = "ch_new", AudioFingerprint = "af_new", Status = ProcessingStatus.SkippedFingerprint };
+        var updatedRecord = new FileContext { FilePath = "/test.mp3", RelativePath = "test.mp3", MTime = 2, ContentHash = "ch_new", AudioFingerprint = "af_new", Status = ProcessingStatus.SkippedFingerprint };
         await _dbService.BatchUpsertRecordsAsync(new[] { updatedRecord });
 
         // Old metadata should not exist
