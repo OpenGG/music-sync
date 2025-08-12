@@ -1,3 +1,4 @@
+using Microsoft.Data.Sqlite;
 using MusicSync.Models;
 using MusicSync.Services;
 using MusicSync.Utils;
@@ -7,7 +8,7 @@ namespace MusicSync.Tests;
 public class MusicSyncServiceTests
 {
     [Fact]
-    public void Run_ProcessesAll()
+    public async Task Run_ProcessesAll()
     {
         using var srcDir = new TemporaryDirectory().Create();
         using var destDir = new TemporaryDirectory();
@@ -15,8 +16,10 @@ public class MusicSyncServiceTests
 
         using var srcFile = srcDir.CreateTemporaryFile("a.mp3", TestUtils.GetMp3Bytes());
 
-        using var dbFile = new TemporaryFile(Path.GetRandomFileName()).Create();
-        using var db = new DatabaseService(dbFile.FilePath);
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        await using var db = new DatabaseService(connection);
+        await db.InitializeDatabaseAsync();
 
         var config = new Config
         {
@@ -25,9 +28,10 @@ public class MusicSyncServiceTests
             MusicExtensions = [".mp3"]
         };
 
-        var proc = new MusicFileProcessor(db, config, tempDir, new DrmPluginLoader([]));
-        var service = new MusicSyncService(proc, [srcDir.DirectoryPath]);
-        service.Run();
+        var hashService = new HashService();
+        var pluginLoader = new DrmPluginLoader([]);
+        var service = new MusicSyncService(db, hashService, config, pluginLoader, tempDir);
+        await service.ProcessMusicLibrary();
 
         Assert.True(File.Exists(Path.Join(destDir.DirectoryPath, "a.mp3")));
     }

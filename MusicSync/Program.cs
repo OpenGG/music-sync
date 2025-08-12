@@ -7,11 +7,11 @@ namespace MusicSync;
 [ExcludeFromCodeCoverage]
 public static class Program
 {
-    public static int Main(string[] args)
+    public static async Task<int> Main(string[] args)
     {
         try
         {
-            FfmpegUtil.CheckFfmpeg();
+            await FfmpegUtil.CheckFfmpegAsync();
 
             string? configPath = null;
             if (args.Length >= 2 && (args[0] == "-c" || args[0] == "--config"))
@@ -22,10 +22,11 @@ public static class Program
             var config = ConfigLoader.Load(configPath);
             var pluginLoader = new DrmPluginLoader(config.DrmPlugins);
 
-            using var db = new DatabaseService(config.DatabaseFile);
-            var processor = new MusicFileProcessor(db, config, rootTempDir, pluginLoader);
-            var service = new MusicSyncService(processor, config.MusicSources);
-            service.Run();
+            await using var db = new DatabaseService(config.DatabaseFile);
+            await db.InitializeDatabaseAsync();
+            var hashService = new HashService();
+            var service = new MusicSyncService(db, hashService, config, pluginLoader, rootTempDir);
+            await service.ProcessMusicLibrary();
             return 0;
         }
         catch (FileNotFoundException e)

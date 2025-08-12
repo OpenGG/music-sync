@@ -1,22 +1,41 @@
+using System.Threading.Tasks.Dataflow;
+using MusicSync.Models;
+using MusicSync.Utils;
+
 namespace MusicSync.Services;
 
-public class MusicSyncService(MusicFileProcessor processor, IEnumerable<string> sourceDirs)
+public class MusicSyncService(
+    DatabaseService db,
+    HashService hashService,
+    Config config,
+    DrmPluginLoader pluginLoader,
+    TemporaryDirectory rootTempDir
+    )
 {
-    public void Run()
+    public async Task ProcessMusicLibrary()
     {
-        foreach (var dir in sourceDirs)
+        foreach (var sourceDir in config.MusicSources)
         {
-            if (!Directory.Exists(dir))
+            if (!Directory.Exists(sourceDir))
             {
-                Console.WriteLine($"Warning: Source directory not found: {dir}. Skipping.");
+                Console.WriteLine($"Warning: Source directory not found: {sourceDir}. Skipping.");
                 continue;
             }
-            Console.WriteLine($"\n--- Processing files from: {dir} ---");
-            foreach (var file in Directory.EnumerateFiles(dir, "*", SearchOption.AllDirectories))
+
+            Console.WriteLine($"\n--- Processing files from: {sourceDir} ---");
+
+            var pipelineBuilder = new FileProcessingPipeline(config, pluginLoader, rootTempDir, sourceDir);
+            var (head, completion) = pipelineBuilder.CreatePipeline(db, hashService);
+
+            foreach (var file in Directory.EnumerateFiles(sourceDir, "*", SearchOption.AllDirectories))
             {
-                processor.ProcessFile(file, dir);
+                await head.SendAsync(file);
             }
+
+            head.Complete();
+            await completion;
         }
+
         Console.WriteLine("\n--- Music synchronization complete ---");
     }
 }

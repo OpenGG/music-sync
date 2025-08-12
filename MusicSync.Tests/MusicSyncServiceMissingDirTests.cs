@@ -7,7 +7,7 @@ namespace MusicSync.Tests;
 public class MusicSyncServiceMissingDirTests
 {
     [Fact]
-    public void Run_IgnoresMissingDir()
+    public async Task Run_IgnoresMissingDir()
     {
         using var srcDir = new TemporaryDirectory();
         var missingPath = srcDir.DirectoryPath;
@@ -15,17 +15,20 @@ public class MusicSyncServiceMissingDirTests
         using var tempDir = new TemporaryDirectory();
 
         using var dbFile = new TemporaryFile(Path.GetRandomFileName()).Create();
-        using var db = new DatabaseService(dbFile.FilePath);
+        await using var db = new DatabaseService(dbFile.FilePath);
+        await db.InitializeDatabaseAsync();
 
         var config = new Config
         {
-            MusicSources = [srcDir.DirectoryPath],
+            MusicSources = [missingPath],
             MusicDestDir = destDir.DirectoryPath,
             MusicExtensions = [".mp3"]
         };
-        var proc = new MusicFileProcessor(db, config, tempDir, new DrmPluginLoader([]));
-        var service = new MusicSyncService(proc, [missingPath]);
-        service.Run();
+
+        var hashService = new HashService();
+        var pluginLoader = new DrmPluginLoader([]);
+        var service = new MusicSyncService(db, hashService, config, pluginLoader, tempDir);
+        await service.ProcessMusicLibrary();
 
         Assert.False(Directory.Exists(destDir.DirectoryPath));
         // no exception means success

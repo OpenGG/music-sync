@@ -8,7 +8,7 @@ public class DrmPlugin(string name, string scriptPath)
     private string ScriptPath { get; } = scriptPath;
     // public string[] Extensions { get; } = extensions;
 
-    public string? Decrypt(string inputFile, TemporaryDirectory tempDir, string[] outputExtensions)
+    public virtual string? Decrypt(string inputFile, TemporaryDirectory tempDir, string[] outputExtensions)
     {
         Directory.CreateDirectory(tempDir.DirectoryPath);
         var psi = new System.Diagnostics.ProcessStartInfo(ScriptPath)

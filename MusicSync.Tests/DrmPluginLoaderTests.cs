@@ -31,3 +31,68 @@ public class DrmPluginLoaderTests
         Assert.Null(plugin);
     }
 }
+
+public class DrmPluginDecryptTests
+{
+    [Fact]
+    public void Decrypt_Success()
+    {
+        using var pluginFile = new TemporaryFile("plugin.sh").Create(
+            """
+            #!/bin/sh
+            touch "$2/output.mp3"
+            exit 0
+            """);
+        TestUtils.SetExecutable(pluginFile.FilePath);
+
+        var plugin = new MusicSync.Plugins.DrmPlugin("test-plugin", pluginFile.FilePath);
+        using var tempDir = new TemporaryDirectory().Create();
+        using var inputFile = new TemporaryFile("dummy.ncm").Create();
+
+        var result = plugin.Decrypt(inputFile.FilePath, tempDir, [".mp3"]);
+
+        Assert.NotNull(result);
+        Assert.Equal(".mp3", Path.GetExtension(result));
+        Assert.True(File.Exists(result));
+    }
+
+    [Fact]
+    public void Decrypt_ScriptFailure()
+    {
+        using var pluginFile = new TemporaryFile("plugin.sh").Create(
+            """
+            #!/bin/sh
+            echo "Failed" >&2
+            exit 1
+            """);
+        TestUtils.SetExecutable(pluginFile.FilePath);
+
+        var plugin = new MusicSync.Plugins.DrmPlugin("test-plugin", pluginFile.FilePath);
+        using var tempDir = new TemporaryDirectory().Create();
+        using var inputFile = new TemporaryFile("dummy.ncm").Create();
+
+        var result = plugin.Decrypt(inputFile.FilePath, tempDir, [".mp3"]);
+
+        Assert.Null(result);
+    }
+
+    [Fact]
+    public void Decrypt_NoOutputFile()
+    {
+        using var pluginFile = new TemporaryFile("plugin.sh").Create(
+            """
+            #!/bin/sh
+            # This script succeeds but creates no output file
+            exit 0
+            """);
+        TestUtils.SetExecutable(pluginFile.FilePath);
+
+        var plugin = new MusicSync.Plugins.DrmPlugin("test-plugin", pluginFile.FilePath);
+        using var tempDir = new TemporaryDirectory().Create();
+        using var inputFile = new TemporaryFile("dummy.ncm").Create();
+
+        var result = plugin.Decrypt(inputFile.FilePath, tempDir, [".mp3"]);
+
+        Assert.Null(result);
+    }
+}

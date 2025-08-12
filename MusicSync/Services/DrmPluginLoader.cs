@@ -19,7 +19,7 @@ public class DrmPluginLoader
         }
     }
 
-    public DrmPlugin? Resolve(string filePath)
+    public virtual DrmPlugin? Resolve(string filePath)
     {
         var ext = Path.GetExtension(filePath).ToLower();
         if (!_extToConfig.TryGetValue(ext, out var cfg)) return null;
