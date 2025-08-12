@@ -1,9 +1,6 @@
-using Xunit;
 using Microsoft.Data.Sqlite;
-using MusicSync.Services;
-using System.Threading.Tasks;
 using MusicSync.Models;
-using System.Collections.Generic;
+using MusicSync.Services;
 
 namespace MusicSync.Tests;
 

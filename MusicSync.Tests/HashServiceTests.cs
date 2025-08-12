@@ -1,7 +1,4 @@
-using Xunit;
 using MusicSync.Services;
-using System.IO;
-using System.Threading.Tasks;
 using MusicSync.Utils;
 
 namespace MusicSync.Tests;

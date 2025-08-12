@@ -1,6 +1,5 @@
 using System.Threading.Tasks.Dataflow;
 using MusicSync.Models;
-using MusicSync.Plugins;
 using MusicSync.Utils;
 
 namespace MusicSync.Services;
@@ -123,7 +122,7 @@ public class FileProcessingPipeline(
         {
             if (context.Status is not (ProcessingStatus.ContentCheck or ProcessingStatus.DrmSuccess or ProcessingStatus.Pending))
             {
-                 return context; // Pass through failures
+                return context; // Pass through failures
             }
 
             var (contentHashExists, audioFingerprintExists) = await db.CheckHashesAsync(context.ContentHash!, context.AudioFingerprint!);
