@@ -1,4 +1,5 @@
-#!/bin/bash
+#!/usr/bin/env bash
+
 set -e
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
@@ -13,6 +14,7 @@ dirs=(
     "MusicSync/obj"
     "MusicSync.Tests/bin"
     "MusicSync.Tests/obj"
+    "MusicSync.Tests/TestResults"
 )
 
 for dir in "${dirs[@]}"; do
