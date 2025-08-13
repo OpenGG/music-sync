@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Options;
 using MusicSync.Models;
 using MusicSync.Services;
 using MusicSync.Utils;
@@ -16,8 +17,8 @@ public class DrmPluginLoaderTests
             """);
         TestUtils.SetExecutable(pluginFile.FilePath);
 
-        var cfg = new DrmPluginConfig { Name = pluginFile.FilePath, Enabled = true, Extensions = [".ncm"] };
-        var loader = new DrmPluginLoader([cfg]);
+        var cfg = new Config { DrmPlugins = [new DrmPluginConfig { Name = pluginFile.FilePath, Enabled = true, Extensions = [".ncm"] }] };
+        var loader = new DrmPluginLoader(Options.Create(cfg));
         var plugin = loader.Resolve("file.ncm");
         Assert.NotNull(plugin);
     }
@@ -25,8 +26,8 @@ public class DrmPluginLoaderTests
     [Fact]
     public void Load_IgnoresMissing()
     {
-        var cfg = new DrmPluginConfig { Name = "not_exists", Enabled = true, Extensions = [".x"] };
-        var loader = new DrmPluginLoader([cfg]);
+        var cfg = new Config { DrmPlugins = [new DrmPluginConfig { Name = "not_exists", Enabled = true, Extensions = [".x"] }] };
+        var loader = new DrmPluginLoader(Options.Create(cfg));
         var plugin = loader.Resolve("a.x");
         Assert.Null(plugin);
     }

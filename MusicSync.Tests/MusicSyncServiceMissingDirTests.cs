@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Options;
 using MusicSync.Models;
 using MusicSync.Services;
 using MusicSync.Utils;
@@ -26,8 +27,9 @@ public class MusicSyncServiceMissingDirTests
         };
 
         var hashService = new HashService();
-        var pluginLoader = new DrmPluginLoader([]);
-        var service = new MusicSyncService(db, hashService, config, pluginLoader, tempDir);
+        var options = Options.Create(config);
+        var pluginLoader = new DrmPluginLoader(options);
+        var service = new MusicSyncService(db, hashService, options, pluginLoader, tempDir);
         await service.ProcessMusicLibrary();
 
         Assert.False(Directory.Exists(destDir.DirectoryPath));

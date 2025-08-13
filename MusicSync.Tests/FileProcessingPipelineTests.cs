@@ -1,5 +1,6 @@
 using System.Threading.Tasks.Dataflow;
 using Microsoft.Data.Sqlite;
+using Microsoft.Extensions.Options;
 using Moq;
 using MusicSync.Models;
 using MusicSync.Plugins;
@@ -27,7 +28,7 @@ public class FileProcessingPipelineTests : IAsyncLifetime
         await _dbService.InitializeDatabaseAsync();
 
         _mockHashService = new Mock<HashService>();
-        _mockDrmPluginLoader = new Mock<DrmPluginLoader>(new List<DrmPluginConfig>()) { CallBase = true };
+        _mockDrmPluginLoader = new Mock<DrmPluginLoader>(Options.Create(new Config())) { CallBase = true };
         _config = new Config
         {
             MusicExtensions = new List<string> { ".mp3" },

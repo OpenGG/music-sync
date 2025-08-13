@@ -1,4 +1,5 @@
 using Microsoft.Data.Sqlite;
+using Microsoft.Extensions.Options;
 using MusicSync.Models;
 
 namespace MusicSync.Services;
@@ -8,6 +9,11 @@ public class DatabaseService : IAsyncDisposable
     private readonly SqliteConnection _connection;
     private readonly bool _externalConnection;
     private bool _disposed;
+
+    public DatabaseService(IOptions<Config> options) : this(new SqliteConnection($"Data Source={options.Value.DatabaseFile}"))
+    {
+        _externalConnection = false;
+    }
 
     public DatabaseService(string file) : this(new SqliteConnection($"Data Source={file}"))
     {
