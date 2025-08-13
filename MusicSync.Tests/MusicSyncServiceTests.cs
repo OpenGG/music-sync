@@ -1,4 +1,5 @@
 using Microsoft.Data.Sqlite;
+using Microsoft.Extensions.Options;
 using MusicSync.Models;
 using MusicSync.Services;
 using MusicSync.Utils;
@@ -29,8 +30,9 @@ public class MusicSyncServiceTests
         };
 
         var hashService = new HashService();
-        var pluginLoader = new DrmPluginLoader([]);
-        var service = new MusicSyncService(db, hashService, config, pluginLoader, tempDir);
+        var options = Options.Create(config);
+        var pluginLoader = new DrmPluginLoader(options);
+        var service = new MusicSyncService(db, hashService, options, pluginLoader, tempDir);
         await service.ProcessMusicLibrary();
 
         Assert.True(File.Exists(Path.Join(destDir.DirectoryPath, "a.mp3")));
@@ -56,8 +58,9 @@ public class MusicSyncServiceTests
         };
 
         var hashService = new HashService();
-        var pluginLoader = new DrmPluginLoader([]);
-        var service = new MusicSyncService(db, hashService, config, pluginLoader, tempDir);
+        var options = Options.Create(config);
+        var pluginLoader = new DrmPluginLoader(options);
+        var service = new MusicSyncService(db, hashService, options, pluginLoader, tempDir);
 
         var sw = new StringWriter();
         var originalOut = Console.Out;

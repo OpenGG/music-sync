@@ -1,4 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
+using MusicSync.Models;
 using MusicSync.Services;
 using MusicSync.Utils;
 
@@ -17,16 +20,24 @@ public static class Program
             if (args.Length >= 2 && (args[0] == "-c" || args[0] == "--config"))
                 configPath = args[1];
 
-            using var rootTempDir = new TemporaryDirectory();
-
             var config = ConfigLoader.Load(configPath);
-            var pluginLoader = new DrmPluginLoader(config.DrmPlugins);
 
-            await using var db = new DatabaseService(config.DatabaseFile);
+            var services = new ServiceCollection();
+            services.AddSingleton<IOptions<Config>>(Options.Create(config));
+            services.AddSingleton<HashService>();
+            services.AddSingleton<DrmPluginLoader>();
+            services.AddScoped<TemporaryDirectory>();
+            services.AddScoped<DatabaseService>();
+            services.AddScoped<MusicSyncService>();
+
+            await using var provider = services.BuildServiceProvider();
+            await using var scope = provider.CreateAsyncScope();
+
+            var db = scope.ServiceProvider.GetRequiredService<DatabaseService>();
             await db.InitializeDatabaseAsync();
-            var hashService = new HashService();
-            var service = new MusicSyncService(db, hashService, config, pluginLoader, rootTempDir);
+            var service = scope.ServiceProvider.GetRequiredService<MusicSyncService>();
             await service.ProcessMusicLibrary();
+
             return 0;
         }
         catch (FileNotFoundException e)

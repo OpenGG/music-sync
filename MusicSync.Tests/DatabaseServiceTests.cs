@@ -51,6 +51,14 @@ public class DatabaseServiceTests : IAsyncLifetime
         Assert.False(await _dbService.CheckMetadataExistsAsync("/other.mp3", 12345));
     }
 
+    [Fact]
+    public async Task CheckHashesAsync_ShouldReturnFalseWhenNoRecords()
+    {
+        var (ch, af) = await _dbService.CheckHashesAsync("missing", "missing");
+        Assert.False(ch);
+        Assert.False(af);
+    }
+
     [Theory]
     [InlineData("ch1", "af1", true, true)]  // Both exist
     [InlineData("ch1", "af2", true, false)] // Content hash exists, fingerprint doesn't
@@ -112,6 +120,15 @@ public class DatabaseServiceTests : IAsyncLifetime
         var (ch_new, af_new) = await _dbService.CheckHashesAsync("ch_new", "af_new");
         Assert.True(ch_new);
         Assert.True(af_new);
+    }
+
+    [Fact]
+    public async Task DisposeAsync_DisposesInternalConnection()
+    {
+        var svc = new DatabaseService(":memory:");
+        await svc.InitializeDatabaseAsync();
+        await svc.DisposeAsync();
+        await svc.DisposeAsync(); // second call should be no-op
     }
 
     [Fact]

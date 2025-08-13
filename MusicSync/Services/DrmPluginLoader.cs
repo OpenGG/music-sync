@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Options;
 using MusicSync.Models;
 using MusicSync.Plugins;
 
@@ -8,9 +9,9 @@ public class DrmPluginLoader
     private readonly Dictionary<string, DrmPluginConfig> _extToConfig = new();
     private readonly Dictionary<string, DrmPlugin?> _loaded = new();
 
-    public DrmPluginLoader(IEnumerable<DrmPluginConfig> configs)
+    public DrmPluginLoader(IOptions<Config> options)
     {
-        foreach (var cfg in configs)
+        foreach (var cfg in options.Value.DrmPlugins)
         {
             if (!cfg.Enabled || string.IsNullOrEmpty(cfg.Name))
                 continue;

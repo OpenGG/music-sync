@@ -1,4 +1,5 @@
 using System.Threading.Tasks.Dataflow;
+using Microsoft.Extensions.Options;
 using MusicSync.Models;
 using MusicSync.Utils;
 
@@ -7,14 +8,14 @@ namespace MusicSync.Services;
 public class MusicSyncService(
     DatabaseService db,
     HashService hashService,
-    Config config,
+    IOptions<Config> config,
     DrmPluginLoader pluginLoader,
     TemporaryDirectory rootTempDir
     )
 {
     public async Task ProcessMusicLibrary()
     {
-        foreach (var sourceDir in config.MusicSources)
+        foreach (var sourceDir in config.Value.MusicSources)
         {
             if (!Directory.Exists(sourceDir))
             {
@@ -24,7 +25,7 @@ public class MusicSyncService(
 
             Console.WriteLine($"\n--- Processing files from: {sourceDir} ---");
 
-            var pipelineBuilder = new FileProcessingPipeline(config, pluginLoader, rootTempDir, sourceDir);
+            var pipelineBuilder = new FileProcessingPipeline(config.Value, pluginLoader, rootTempDir, sourceDir);
             var (head, completion) = pipelineBuilder.CreatePipeline(db, hashService);
 
             foreach (var file in Directory.EnumerateFiles(sourceDir, "*", SearchOption.AllDirectories))

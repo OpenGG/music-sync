@@ -22,5 +22,6 @@ fi
 reportgenerator \
     -reports:**/TestResults/**/coverage.cobertura.xml \
     -targetdir:CoverageReport \
-    -filefilters:"-*Migrations*;-*Generated.cs;-*TypeFactoryGenerator*;-*RegexGenerator*"
+    -filefilters:"-*Migrations*;-*Generated.cs;-*TypeFactoryGenerator*;-*RegexGenerator*;-*System.Text.Json.SourceGeneration*;-*FfmpegUtil*" \
+    -reporttypes:"Html;TextSummary"
 

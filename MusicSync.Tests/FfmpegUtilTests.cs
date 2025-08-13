@@ -81,6 +81,24 @@ public class FfmpegUtilTests
     }
 
     [Fact]
+    public async Task GetAudioHashAsync_ReturnsNullWhenHashMissing()
+    {
+        using var _ = new MockFfmpeg("""
+                                     #!/usr/bin/env bash
+                                     if [ "$1" = "-version" ]; then
+                                       echo 'ffmpeg version test'
+                                       exit 0
+                                     fi
+                                     echo 'no hash here'
+                                     exit 0
+                                     """);
+
+        using var tmpFile = new TemporaryFile("a.txt").Create("hi");
+        var hash = await FfmpegUtil.GetAudioHashAsync(tmpFile.FilePath);
+        Assert.Null(hash);
+    }
+
+    [Fact]
     public void GetAudioHash_SyncWrapper_Works()
     {
         using var _ = new MockFfmpeg("""
