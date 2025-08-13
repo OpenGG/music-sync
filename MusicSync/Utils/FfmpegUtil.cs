@@ -11,12 +11,12 @@ public static partial class FfmpegUtil
     /// </summary>
     /// <exception cref="FileNotFoundException">Thrown when ffmpeg executable is not found.</exception>
     /// <exception cref="Exception">Thrown when ffmpeg version check fails or an unexpected error occurs.</exception>
-    public static void CheckFfmpeg()
+    public static async Task CheckFfmpegAsync()
     {
         var psi = CreateFfmpegProcessStartInfo();
         psi.ArgumentList.Add("-version");
 
-        var (stdout, stderr, exitCode) = RunFfmpegProcess(psi);
+        var (stdout, stderr, exitCode) = await RunFfmpegProcessAsync(psi);
 
         if (exitCode != 0)
         {
@@ -36,12 +36,7 @@ public static partial class FfmpegUtil
         }
     }
 
-    /// <summary>
-    /// Gets the SHA256 hash of the audio stream from the specified file using ffmpeg.
-    /// </summary>
-    /// <param name="filepath">The path to the audio file.</param>
-    /// <returns>The SHA256 hash prefixed with "sha256:", or null if the hash cannot be obtained.</returns>
-    public static string? GetAudioHash(string filepath)
+    public static async Task<string?> GetAudioHashAsync(string filepath)
     {
         var psi = CreateFfmpegProcessStartInfo();
         psi.ArgumentList.Add("-i");
@@ -59,7 +54,7 @@ public static partial class FfmpegUtil
         psi.ArgumentList.Add("warning"); // Only show warnings and errors
         psi.ArgumentList.Add("-"); // Output to stdout
 
-        var (stdout, stderr, exitCode) = RunFfmpegProcess(psi);
+        var (stdout, stderr, exitCode) = await RunFfmpegProcessAsync(psi);
 
         if (exitCode != 0)
         {
@@ -73,9 +68,11 @@ public static partial class FfmpegUtil
         return match.Success ? $"sha256:{match.Groups[1].Value}" : null;
     }
 
-    /// <summary>
-    /// Creates a default ProcessStartInfo object for ffmpeg.
-    /// </summary>
+
+
+    [Obsolete("Use GetAudioHashAsync instead.")]
+    public static string? GetAudioHash(string filepath) => GetAudioHashAsync(filepath).GetAwaiter().GetResult();
+
     private static ProcessStartInfo CreateFfmpegProcessStartInfo()
     {
         return new ProcessStartInfo("ffmpeg")
@@ -87,15 +84,7 @@ public static partial class FfmpegUtil
         };
     }
 
-    /// <summary>
-    /// Runs an ffmpeg process with the specified ProcessStartInfo and returns its output and exit code.
-    /// </summary>
-    /// <param name="psi">The ProcessStartInfo for the ffmpeg process.</param>
-    /// <param name="timeout">The waiting timeout for the ffmpeg process.</param>
-    /// <returns>A tuple containing stdout, stderr, and the exit code.</returns>
-    /// <exception cref="Exception">Thrown if the ffmpeg process cannot be started.</exception>
-    private static (string stdout, string stderr, int exitCode) RunFfmpegProcess(ProcessStartInfo psi,
-        int? timeout = null)
+    private static async Task<(string stdout, string stderr, int exitCode)> RunFfmpegProcessAsync(ProcessStartInfo psi, CancellationToken cancellationToken = default)
     {
         try
         {
@@ -106,23 +95,12 @@ public static partial class FfmpegUtil
                     $"Failed to start ffmpeg process for command: {psi.FileName} {string.Join(" ", psi.ArgumentList)}");
             }
 
-            // It's generally better to wait for exit before reading streams to avoid deadlocks
-            // However, for short-lived processes like these, reading after a timeout is usually safe.
-            // For very large outputs, asynchronous reads or separate threads might be needed.
-            proc.WaitForExit(timeout ?? 60000); // Wait up to 60 seconds
+            await proc.WaitForExitAsync(cancellationToken);
 
-            var stdout = proc.StandardOutput.ReadToEnd();
-            var stderr = proc.StandardError.ReadToEnd();
+            var stdout = await proc.StandardOutput.ReadToEndAsync(cancellationToken);
+            var stderr = await proc.StandardError.ReadToEndAsync(cancellationToken);
 
-            // Ensure the process has truly exited before checking ExitCode
-            if (proc.HasExited)
-            {
-                return (stdout, stderr, proc.ExitCode);
-            }
-
-            proc.Kill(); // Terminate if it's still running
-            throw new TimeoutException(
-                $"ffmpeg process did not exit within 60 seconds for command: {psi.FileName} {string.Join(" ", psi.ArgumentList)}");
+            return (stdout, stderr, proc.ExitCode);
         }
         catch (Win32Exception e) when (e.NativeErrorCode == 2)
         {

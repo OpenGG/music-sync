@@ -1,113 +1,143 @@
 using Microsoft.Data.Sqlite;
+using Microsoft.Extensions.Options;
+using MusicSync.Models;
 
 namespace MusicSync.Services;
 
-public class DatabaseService : IDisposable
+public class DatabaseService : IAsyncDisposable
 {
     private readonly SqliteConnection _connection;
-
+    private readonly bool _externalConnection;
     private bool _disposed;
 
-    public DatabaseService(string file)
+    public DatabaseService(IOptions<Config> options) : this(new SqliteConnection($"Data Source={options.Value.DatabaseFile}"))
     {
-        _connection = new SqliteConnection($"Data Source={file}");
-        _connection.Open();
-        InitTables();
+        _externalConnection = false;
     }
 
-    private void InitTables()
+    public DatabaseService(string file) : this(new SqliteConnection($"Data Source={file}"))
+    {
+        _externalConnection = false;
+    }
+
+    public DatabaseService(SqliteConnection connection)
+    {
+        _connection = connection;
+        _externalConnection = true;
+    }
+
+    public async Task InitializeDatabaseAsync()
+    {
+        await _connection.OpenAsync();
+
+        using var cmd = _connection.CreateCommand();
+        cmd.CommandText = """
+                          CREATE TABLE IF NOT EXISTS FileRecords (
+                              Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                              AbsolutePath TEXT NOT NULL,
+                              MTime INTEGER NOT NULL,
+                              ContentHash TEXT,
+                              AudioFingerprint TEXT,
+                              Status INTEGER NOT NULL,
+                              LastProcessedAt DATETIME NOT NULL
+                          );
+
+                          DROP INDEX IF EXISTS IDX_FileRecords_Path_MTime;
+                          CREATE UNIQUE INDEX IF NOT EXISTS IDX_FileRecords_Path ON FileRecords(AbsolutePath);
+                          CREATE INDEX IF NOT EXISTS IDX_FileRecords_ContentHash ON FileRecords(ContentHash);
+                          CREATE INDEX IF NOT EXISTS IDX_FileRecords_AudioFingerprint ON FileRecords(AudioFingerprint);
+                          """;
+        await cmd.ExecuteNonQueryAsync();
+    }
+
+    public async Task<bool> CheckMetadataExistsAsync(string absolutePath, long mTime)
+    {
+        using var cmd = _connection.CreateCommand();
+        cmd.CommandText = "SELECT 1 FROM FileRecords WHERE AbsolutePath = $path AND MTime = $mtime";
+        cmd.Parameters.AddWithValue("$path", absolutePath);
+        cmd.Parameters.AddWithValue("$mtime", mTime);
+        return await cmd.ExecuteScalarAsync() != null;
+    }
+
+    public virtual async Task<(bool contentHashExists, bool audioFingerprintExists)> CheckHashesAsync(string contentHash, string audioFingerprint)
     {
         using var cmd = _connection.CreateCommand();
         cmd.CommandText = """
-                          CREATE TABLE IF NOT EXISTS music_hash (
-                              id INTEGER PRIMARY KEY AUTOINCREMENT,
-                              hash TEXT UNIQUE NOT NULL,
-                              first_processed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                          );
+                          SELECT
+                              (SELECT 1 FROM FileRecords WHERE ContentHash = $ch) as ContentHashExists,
+                              (SELECT 1 FROM FileRecords WHERE AudioFingerprint = $af) as AudioFingerprintExists
                           """;
-        cmd.ExecuteNonQuery();
-        cmd.CommandText = """
-                          CREATE TABLE IF NOT EXISTS operation_log (
-                              id INTEGER PRIMARY KEY AUTOINCREMENT,
-                              original_path TEXT NOT NULL,
-                              mtime INTEGER NOT NULL,
-                              music_hash TEXT,
-                              result TEXT NOT NULL,
-                              log_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                              UNIQUE (original_path, mtime)
-                          );
-                          """;
-        cmd.ExecuteNonQuery();
-    }
+        cmd.Parameters.AddWithValue("$ch", (object?)contentHash ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("$af", (object?)audioFingerprint ?? DBNull.Value);
 
-    public bool IsMusicHashProcessed(string hash)
-    {
-        using var cmd = _connection.CreateCommand();
-        cmd.CommandText = "SELECT 1 FROM music_hash WHERE hash = $hash";
-        cmd.Parameters.AddWithValue("$hash", hash);
-        return cmd.ExecuteScalar() != null;
-    }
-
-    public void RecordMusicHash(string hash)
-    {
-        using var cmd = _connection.CreateCommand();
-        cmd.CommandText = "INSERT OR IGNORE INTO music_hash (hash) VALUES ($hash)";
-        cmd.Parameters.AddWithValue("$hash", hash);
-        cmd.ExecuteNonQuery();
-    }
-
-    public string? FindPreviousResult(string path, long mtime)
-    {
-        using var cmd = _connection.CreateCommand();
-        cmd.CommandText = "SELECT result FROM operation_log WHERE original_path = $p AND mtime = $m";
-        cmd.Parameters.AddWithValue("$p", path);
-        cmd.Parameters.AddWithValue("$m", mtime);
-        return cmd.ExecuteScalar() as string;
-    }
-
-    public void LogOperation(string path, long mtime, string? hash, string result, bool logToDb = true)
-    {
-        if (!logToDb)
+        using var reader = await cmd.ExecuteReaderAsync();
+        if (await reader.ReadAsync())
         {
-            Console.WriteLine($"LOG (Console Only): {Path.GetFileName(path)} -> Result: {result}");
-            return;
+            var contentHashExists = !reader.IsDBNull(0) && reader.GetInt32(0) == 1;
+            var audioFingerprintExists = !reader.IsDBNull(1) && reader.GetInt32(1) == 1;
+            return (contentHashExists, audioFingerprintExists);
         }
 
-        using var cmd = _connection.CreateCommand();
-        cmd.CommandText =
-            "INSERT OR IGNORE INTO operation_log (original_path, mtime, music_hash, result) VALUES ($p,$m,$h,$r)";
-        cmd.Parameters.AddWithValue("$p", path);
-        cmd.Parameters.AddWithValue("$m", mtime);
-        cmd.Parameters.AddWithValue("$h", (object?)hash ?? DBNull.Value);
-        cmd.Parameters.AddWithValue("$r", result);
-        cmd.ExecuteNonQuery();
-        Console.WriteLine($"LOG (DB): {Path.GetFileName(path)} -> Result: {result}");
+        return (false, false);
     }
 
-    /// <summary>
-    /// 实现 IDisposable 接口，释放资源（删除临时目录及其内容）。
-    /// </summary>
-    public void Dispose()
+    public virtual async Task BatchUpsertRecordsAsync(IEnumerable<FileContext> contexts)
     {
-        Dispose(true);
+        await using var transaction = (SqliteTransaction)await _connection.BeginTransactionAsync();
+
+        foreach (var context in contexts)
+        {
+            using var cmd = _connection.CreateCommand();
+            cmd.Transaction = transaction;
+
+            cmd.CommandText = """
+                INSERT INTO FileRecords (AbsolutePath, MTime, ContentHash, AudioFingerprint, Status, LastProcessedAt)
+                VALUES ($path, $mtime, $ch, $af, $status, $lpa)
+                ON CONFLICT(AbsolutePath) DO UPDATE SET
+                    MTime = excluded.MTime,
+                    ContentHash = excluded.ContentHash,
+                    AudioFingerprint = excluded.AudioFingerprint,
+                    Status = excluded.Status,
+                    LastProcessedAt = excluded.LastProcessedAt;
+                """;
+
+            cmd.Parameters.AddWithValue("$path", context.FilePath);
+            cmd.Parameters.AddWithValue("$mtime", context.MTime);
+            cmd.Parameters.AddWithValue("$ch", (object?)context.ContentHash ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("$af", (object?)context.AudioFingerprint ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("$status", (int)context.Status);
+            cmd.Parameters.AddWithValue("$lpa", DateTime.UtcNow);
+
+            await cmd.ExecuteNonQueryAsync();
+        }
+
+        await transaction.CommitAsync();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        await DisposeAsync(true);
         GC.SuppressFinalize(this);
     }
 
-    private void Dispose(bool disposing)
+    protected virtual async ValueTask DisposeAsync(bool disposing)
     {
         if (_disposed) return;
         if (disposing)
         {
-            // 释放托管资源
+            // Release managed resources
         }
 
-        _connection.Dispose();
+        if (!_externalConnection)
+        {
+            await _connection.DisposeAsync();
+        }
 
         _disposed = true;
     }
 
     ~DatabaseService()
     {
-        Dispose(false);
+        DisposeAsync(false).GetAwaiter().GetResult();
     }
 }

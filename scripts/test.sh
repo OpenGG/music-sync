@@ -1,4 +1,5 @@
-#!/bin/bash
+#!/usr/bin/env bash
+
 set -e
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
@@ -22,5 +23,6 @@ fi
 reportgenerator \
     -reports:**/TestResults/**/coverage.cobertura.xml \
     -targetdir:CoverageReport \
-    -filefilters:"-*Migrations*;-*Generated.cs;-*TypeFactoryGenerator*;-*RegexGenerator*"
+    -filefilters:"-*Migrations*;-*Generated.cs;-*TypeFactoryGenerator*;-*RegexGenerator*;-*System.Text.Json.SourceGeneration*" \
+    -reporttypes:"Html;TextSummary"
 
